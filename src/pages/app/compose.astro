@@ -28,17 +28,38 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
       <div class="controls__section" id="transform-section">
         <p class="hint muted">Transform</p>
-        <div class="transform-grid">
-          <button class="btn btn-soft btn-sm" type="button" data-action="senior">Make it more senior</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="buzzwords">Add buzzwords</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="urgency">Add urgency</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="thought-leadership">Make it thought leadership</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="interview">Turn into interview question</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="roadmap">Repackage as roadmap</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="tradeoff">Add a tradeoff</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="production">Add production framing</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="linkedin">Repackage for LinkedIn</button>
-          <button class="btn btn-soft btn-sm" type="button" data-action="x">Compress for X</button>
+        <div class="transform-list transform-list--primary">
+          <button class="transform-action" type="button" data-action="senior">Make it more senior</button>
+          <button class="transform-action" type="button" data-action="buzzwords">Add buzzwords</button>
+          <button class="transform-action" type="button" data-action="urgency">Add urgency</button>
+          <button class="transform-action" type="button" data-action="thought-leadership">Make it thought leadership</button>
+        </div>
+        <button
+          class="transform-more-toggle"
+          type="button"
+          id="transform-more-toggle"
+          aria-expanded="false"
+          aria-controls="transform-more"
+        >
+          <span>More transformations</span>
+          <svg class="transform-more-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path
+              d="M6 9l6 6 6-6"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"></path>
+          </svg>
+        </button>
+        <div class="transform-more" id="transform-more" hidden>
+          <div class="transform-list transform-list--more">
+            <button class="transform-action transform-action--muted" type="button" data-action="interview">Turn into interview question</button>
+            <button class="transform-action transform-action--muted" type="button" data-action="roadmap">Repackage as roadmap</button>
+            <button class="transform-action transform-action--muted" type="button" data-action="tradeoff">Add a tradeoff</button>
+            <button class="transform-action transform-action--muted" type="button" data-action="production">Add production framing</button>
+            <button class="transform-action transform-action--muted" type="button" data-action="linkedin">Repackage for LinkedIn</button>
+            <button class="transform-action transform-action--muted" type="button" data-action="x">Compress for X</button>
+          </div>
         </div>
       </div>
 
@@ -303,6 +324,15 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   document.getElementById("generate")?.addEventListener("click", create);
+
+  const transformMoreToggle = document.getElementById("transform-more-toggle")!;
+  const transformMorePanel = document.getElementById("transform-more")!;
+
+  transformMoreToggle.addEventListener("click", () => {
+    const expanded = transformMoreToggle.getAttribute("aria-expanded") === "true";
+    transformMoreToggle.setAttribute("aria-expanded", String(!expanded));
+    transformMorePanel.hidden = expanded;
+  });
 
   document.querySelectorAll("[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -602,27 +632,87 @@ import AppLayout from "../../layouts/AppLayout.astro";
     background: #f8fafc;
   }
 
-  .transform-grid {
+  .transform-list {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 0.4rem;
+    gap: 0.05rem;
   }
 
-  .transform-grid .btn {
-    justify-content: flex-start;
-    min-height: 38px;
-    padding-inline: 0.85rem;
-    border-radius: 10px;
+  .transform-action {
+    display: block;
+    width: 100%;
+    padding: 0.42rem 0.55rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    font-family: var(--font-body);
     font-size: 0.8rem;
     font-weight: 650;
+    color: var(--ink);
+    line-height: 1.35;
+    cursor: pointer;
+    transition:
+      background 0.15s var(--ease),
+      color 0.15s var(--ease);
   }
 
-  .transform-grid .btn:disabled {
+  .transform-action:hover:not(:disabled) {
+    background: rgba(10, 22, 40, 0.045);
+  }
+
+  .transform-action:disabled {
     opacity: 0.55;
     cursor: not-allowed;
-    white-space: normal;
-    line-height: 1.25;
-    text-align: left;
+  }
+
+  .transform-action--muted {
+    font-size: 0.77rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .transform-action--muted:hover:not(:disabled) {
+    color: var(--ink-soft);
+    background: rgba(10, 22, 40, 0.035);
+  }
+
+  .transform-more-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    width: 100%;
+    margin-top: 0.15rem;
+    padding: 0.35rem 0.1rem;
+    border: none;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 650;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition: color 0.2s var(--ease);
+  }
+
+  .transform-more-toggle:hover {
+    color: var(--ink);
+  }
+
+  .transform-more-chevron {
+    flex-shrink: 0;
+    transition: transform 0.2s var(--ease);
+  }
+
+  .transform-more-toggle[aria-expanded="true"] .transform-more-chevron {
+    transform: rotate(180deg);
+  }
+
+  .transform-more[hidden] {
+    display: none !important;
+  }
+
+  .transform-more {
+    padding-top: 0.15rem;
   }
 
   .hint {
@@ -711,10 +801,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
   @media (min-width: 960px) {
     .compose {
       grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
-    }
-
-    .transform-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>
