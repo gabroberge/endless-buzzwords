@@ -3,11 +3,17 @@ import AppLayout from "../../layouts/AppLayout.astro";
 ---
 
 <AppLayout title="Channels" eyebrow="Distribution">
-  <section>
+  <section class="channels-page">
     <div class="card intro">
-      <h2>Connected destinations</h2>
-      <p class="muted">Connect channels to extract maximum output from every idea. One draft, every platform — stored locally in this browser.</p>
-      <p class="status" id="status"></p>
+      <div class="intro__copy">
+        <h2>Connected destinations</h2>
+        <p class="muted">
+          Connect channels to extract maximum output from every idea. One draft, every platform — stored locally in
+          this browser.
+        </p>
+      </div>
+      <div class="intro__rail" id="summary-rail" aria-label="Channel status overview"></div>
+      <p class="intro__status" id="status"></p>
     </div>
     <div class="grid" id="channels"></div>
   </section>
@@ -15,7 +21,33 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import { loadWorkspace, updateWorkspace, type ChannelId } from "../../lib/storage";
-  import { showToast } from "../../lib/ui";
+import { showToast } from "../../lib/ui";
+
+  const channelMeta: Record<
+    ChannelId,
+    { monogram: string; mark: string; desc: string }
+  > = {
+    linkedin: {
+      monogram: "in",
+      mark: "#0a66c2",
+      desc: "Ready for maximum professional authority extraction.",
+    },
+    x: {
+      monogram: "X",
+      mark: "#101828",
+      desc: "Optimized for compressed certainty and unsolicited takes.",
+    },
+    youtube: {
+      monogram: "▶",
+      mark: "#cc0000",
+      desc: "Convert one thought into several minutes of watch time.",
+    },
+    facebook: {
+      monogram: "f",
+      mark: "#1877f2",
+      desc: "Extend technical authority into comment sections worldwide.",
+    },
+  };
 
   function render() {
     const ws = loadWorkspace();
@@ -23,21 +55,48 @@ import AppLayout from "../../layouts/AppLayout.astro";
     const status = document.getElementById("status");
     if (status) status.textContent = `${active} channels ready · same idea, more surfaces`;
 
+    const rail = document.getElementById("summary-rail");
+    if (rail) {
+      rail.innerHTML = ws.channels
+        .map((c) => {
+          const meta = channelMeta[c.id];
+          return `
+        <div class="summary-chip ${c.connected ? "summary-chip--on" : "summary-chip--off"}">
+          <span class="summary-chip__mark" style="--mark:${meta.mark}">${meta.monogram}</span>
+          <span class="summary-chip__label">${c.label}</span>
+          <span class="summary-chip__state">${c.connected ? "Connected" : "Disconnected"}</span>
+        </div>`;
+        })
+        .join("");
+    }
+
     const grid = document.getElementById("channels");
     if (!grid) return;
     grid.innerHTML = ws.channels
-      .map(
-        (c) => `
-      <article class="card channel">
-        <div>
-          <h3>${c.label}</h3>
-          <p class="muted">${c.connected ? "Connected" : "Not connected"}</p>
+      .map((c) => {
+        const meta = channelMeta[c.id];
+        return `
+      <article class="integration ${c.connected ? "integration--on" : ""}">
+        <div class="integration__top">
+          <div class="integration__mark" style="--mark:${meta.mark}">${meta.monogram}</div>
+          <div class="integration__meta">
+            <div class="integration__headline">
+              <h3>${c.label}</h3>
+              <span class="integration__badge ${c.connected ? "integration__badge--on" : "integration__badge--off"}">
+                <span class="integration__dot" aria-hidden="true"></span>
+                ${c.connected ? "Connected" : "Not connected"}
+              </span>
+            </div>
+            <p class="integration__desc">${meta.desc}</p>
+          </div>
         </div>
-        <button class="btn ${c.connected ? "btn-ghost" : "btn-accent"} btn-sm" type="button" data-id="${c.id}">
-          ${c.connected ? "Disconnect" : "Connect"}
-        </button>
-      </article>`,
-      )
+        <div class="integration__actions">
+          <button class="btn ${c.connected ? "btn-ghost" : "btn-accent"} btn-sm" type="button" data-id="${c.id}">
+            ${c.connected ? "Disconnect" : "Connect"}
+          </button>
+        </div>
+      </article>`;
+      })
       .join("");
 
     grid.querySelectorAll("[data-id]").forEach((btn) => {
@@ -59,21 +118,41 @@ import AppLayout from "../../layouts/AppLayout.astro";
 </script>
 
 <style>
+  .channels-page {
+    display: grid;
+    gap: 1rem;
+  }
+
   .intro {
-    padding: 1.2rem;
-    margin-bottom: 1rem;
+    padding: 1.25rem 1.3rem;
+    display: grid;
+    gap: 1rem;
   }
 
   .intro h2 {
     font-family: var(--font-body);
     font-size: 1.1rem;
+    font-weight: 750;
     margin-bottom: 0.35rem;
   }
 
-  .status {
-    margin-top: 0.85rem;
-    font-weight: 750;
+  .intro__copy .muted {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    max-width: 42rem;
+  }
+
+  .intro__status {
+    margin: 0;
+    font-size: 0.88rem;
+    font-weight: 700;
     color: var(--accent-hover);
+  }
+
+  .intro__rail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
   }
 
   .grid {
@@ -81,20 +160,175 @@ import AppLayout from "../../layouts/AppLayout.astro";
     gap: 0.85rem;
   }
 
-  .channel {
-    display: flex;
-    justify-content: space-between;
+  /* Client-rendered markup */
+  .intro__rail :global(.summary-chip) {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 0.55rem;
+    row-gap: 0.1rem;
     align-items: center;
-    gap: 1rem;
-    padding: 1.1rem 1.15rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+    min-width: 0;
   }
 
-  .channel h3 {
+  .intro__rail :global(.summary-chip--on) {
+    border-color: rgba(12, 143, 124, 0.22);
+    background: rgba(12, 143, 124, 0.05);
+  }
+
+  .intro__rail :global(.summary-chip__mark) {
+    grid-row: 1 / span 2;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: #fff;
+    background: var(--mark);
+    letter-spacing: -0.03em;
+    flex-shrink: 0;
+  }
+
+  .intro__rail :global(.summary-chip__label) {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  .intro__rail :global(.summary-chip__state) {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    line-height: 1.2;
+  }
+
+  .intro__rail :global(.summary-chip--on .summary-chip__state) {
+    color: var(--accent-hover);
+  }
+
+  .grid :global(.integration) {
+    display: grid;
+    gap: 1rem;
+    padding: 1.15rem 1.2rem 1.2rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--line);
+    background: var(--elevated);
+    box-shadow: var(--shadow-sm);
+    transition:
+      border-color 0.2s var(--ease),
+      box-shadow 0.2s var(--ease),
+      background 0.2s var(--ease);
+  }
+
+  .grid :global(.integration--on) {
+    border-color: rgba(12, 143, 124, 0.28);
+    background:
+      linear-gradient(180deg, rgba(12, 143, 124, 0.05) 0%, rgba(255, 255, 255, 0) 42%),
+      var(--elevated);
+    box-shadow:
+      0 0 0 1px rgba(12, 143, 124, 0.08),
+      var(--shadow-sm);
+  }
+
+  .grid :global(.integration__top) {
+    display: flex;
+    gap: 0.9rem;
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .grid :global(.integration__mark) {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 11px;
+    display: grid;
+    place-items: center;
+    font-size: 0.82rem;
+    font-weight: 800;
+    color: #fff;
+    background: var(--mark);
+    letter-spacing: -0.03em;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
+
+  .grid :global(.integration__meta) {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .grid :global(.integration__headline) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.45rem 0.65rem;
+  }
+
+  .grid :global(.integration h3) {
     font-family: var(--font-body);
-    font-size: 1.05rem;
+    font-size: 1.02rem;
+    font-weight: 750;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .grid :global(.integration__badge) {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+
+  .grid :global(.integration__badge--on) {
+    background: rgba(12, 143, 124, 0.12);
+    color: var(--accent-hover);
+  }
+
+  .grid :global(.integration__badge--off) {
+    background: var(--surface-2);
+    color: var(--ink-muted);
+  }
+
+  .grid :global(.integration__dot) {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .grid :global(.integration__desc) {
+    margin: 0;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+    font-weight: 500;
+    max-width: 34ch;
+  }
+
+  .grid :global(.integration__actions) {
+    display: flex;
+    justify-content: flex-start;
+    padding-top: 0.1rem;
   }
 
   @media (min-width: 720px) {
+    .intro__rail {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
     .grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
