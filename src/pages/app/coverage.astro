@@ -27,37 +27,51 @@ import AppLayout from "../../layouts/AppLayout.astro";
 </AppLayout>
 
 <script>
-  import { buildCoverage, rebalanceCoverage, type CoverageMap } from "../../lib/coverage-engine";
+  import { buildCoverage, isCoverageValid, rebalanceCoverage, type CoverageMap } from "../../lib/coverage-engine";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { showToast } from "../../lib/ui";
 
-  let current: CoverageMap | null = loadWorkspace().coverage;
+  function focusTopics() {
+    return loadWorkspace().focusTopics;
+  }
+
+  function loadMap(): CoverageMap {
+    const ws = loadWorkspace();
+    if (ws.coverage && isCoverageValid(ws.coverage, ws.focusTopics)) {
+      return ws.coverage;
+    }
+    return buildCoverage(42, ws.focusTopics);
+  }
+
+  let current: CoverageMap | null = loadMap();
 
   function render(map: CoverageMap) {
     current = map;
     document.getElementById("audience")!.textContent = `For ${map.audience}`;
     document.getElementById("title")!.textContent = map.title;
     document.getElementById("breadth")!.textContent = `Breadth ${map.breadth}%`;
-    document.getElementById("clusters")!.innerHTML = map.clusters
-      .map(
-        (c) => `
+    document.getElementById("clusters")!.innerHTML = map.clusters.length
+      ? map.clusters
+          .map(
+            (c) => `
       <section class="cluster">
         <h3>${c.label}</h3>
         <ul>${c.topics.map((t) => `<li>${t}</li>`).join("")}</ul>
       </section>`,
-      )
-      .join("");
+          )
+          .join("")
+      : `<p class="muted">Select focus topics under Brand to build a coverage map.</p>`;
   }
 
   document.getElementById("build")?.addEventListener("click", () => {
-    render(buildCoverage(Date.now()));
+    render(buildCoverage(Date.now(), focusTopics()));
   });
 
   document.getElementById("rebalance")?.addEventListener("click", () => {
     if (!current) {
-      render(buildCoverage(Date.now()));
+      render(buildCoverage(Date.now(), focusTopics()));
     } else {
-      render(rebalanceCoverage(current));
+      render(rebalanceCoverage(current, Date.now()));
     }
     showToast("Emphasis updated. Same topics, different priority.");
   });
@@ -69,8 +83,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     window.dispatchEvent(new Event("eb:workspace"));
   });
 
-  if (current) render(current);
-  else render(buildCoverage(42));
+  render(current);
 </script>
 
 <style>

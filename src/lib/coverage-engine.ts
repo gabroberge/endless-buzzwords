@@ -1,4 +1,5 @@
-import { coverageAudiences, coverageClusters, easterEggCluster, type CoverageCluster } from "./data/coverage";
+import { coverageAudiences, topicEditorialAngles, type CoverageCluster } from "./data/coverage";
+import { topicById } from "./data/topics";
 
 export type CoverageMap = {
   id: string;
@@ -7,7 +8,7 @@ export type CoverageMap = {
   clusters: CoverageCluster[];
   breadth: number;
   refreshedAt: string;
-  includesEasterEgg: boolean;
+  focusTopicIds: string[];
 };
 
 function mulberry32(seed: number) {
@@ -33,37 +34,72 @@ function shuffle<T>(rng: () => number, list: T[]): T[] {
   return copy;
 }
 
-export function buildCoverage(seed = Date.now(), withEgg = false): CoverageMap {
+function anglePool(topicId: string): string[] {
+  return topicEditorialAngles[topicId] ?? [];
+}
+
+function clusterForTopic(rng: () => number, topicId: string): CoverageCluster | null {
+  const topic = topicById[topicId];
+  if (!topic) return null;
+
+  const pool = anglePool(topicId);
+  if (!pool.length) return { id: topicId, label: topic.label, topics: [] };
+
+  const count = Math.min(pool.length, Math.max(3, 3 + Math.floor(rng() * 2)));
+  return {
+    id: topicId,
+    label: topic.label,
+    topics: shuffle(rng, [...pool]).slice(0, count),
+  };
+}
+
+function computeBreadth(clusters: CoverageCluster[], rng: () => number): number {
+  const angleCount = clusters.reduce((n, c) => n + c.topics.length, 0);
+  if (!clusters.length) return 0;
+  return Math.min(98, Math.round(48 + angleCount * 2.4 + clusters.length * 4 + rng() * 6));
+}
+
+export function buildCoverage(seed: number, focusTopicIds: string[]): CoverageMap {
   const rng = mulberry32(seed);
-  let clusters = coverageClusters.map((c) => ({
-    ...c,
-    topics: shuffle(rng, [...c.topics]).slice(0, Math.max(2, c.topics.length - (rng() > 0.65 ? 1 : 0))),
-  }));
-
-  const includesEasterEgg = withEgg || rng() > 0.92;
-  if (includesEasterEgg) {
-    clusters = [...clusters.slice(0, 4), easterEggCluster, ...clusters.slice(4)];
-  }
-
-  const topicCount = clusters.reduce((n, c) => n + c.topics.length, 0);
+  const ids = [...new Set(focusTopicIds)].filter((id) => topicById[id]);
+  const clusters = shuffle(rng, ids)
+    .map((id) => clusterForTopic(rng, id))
+    .filter((c): c is CoverageCluster => c !== null);
 
   return {
     id: `cov_${Date.now().toString(36)}`,
     title: "Topic runway map",
     audience: pick(rng, coverageAudiences),
     clusters,
-    breadth: Math.min(98, Math.round(55 + topicCount * 1.8 + rng() * 8)),
+    breadth: computeBreadth(clusters, rng),
     refreshedAt: new Date().toISOString(),
-    includesEasterEgg,
+    focusTopicIds: ids,
   };
 }
 
-export function rebalanceCoverage(map: CoverageMap): CoverageMap {
+export function rebalanceCoverage(map: CoverageMap, seed = Date.now()): CoverageMap {
+  const rng = mulberry32(seed);
+  const clusters = shuffle(rng, [...map.clusters]).map((cluster) => {
+    const pool = anglePool(cluster.id);
+    const size = Math.min(pool.length, Math.max(3, cluster.topics.length || 3));
+    return {
+      ...cluster,
+      topics: shuffle(rng, [...pool]).slice(0, size),
+    };
+  });
+
   return {
     ...map,
+    clusters,
     breadth: Math.min(99, map.breadth + 1),
     refreshedAt: new Date().toISOString(),
-    title: map.title,
-    clusters: map.clusters.map((c) => ({ ...c })),
+    focusTopicIds: map.focusTopicIds,
   };
+}
+
+export function isCoverageValid(map: CoverageMap | null | undefined, focusTopicIds: string[]): boolean {
+  if (!map?.clusters?.length || !focusTopicIds.length) return false;
+  const focusSet = new Set(focusTopicIds);
+  if (map.clusters.length !== focusSet.size) return false;
+  return map.clusters.every((cluster) => focusSet.has(cluster.id) && cluster.label === topicById[cluster.id]?.label);
 }
