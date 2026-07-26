@@ -22,6 +22,31 @@ export function inferLifecycle(contentId: string, pipeline: PipelineItem[], fall
   return fallback;
 }
 
+export function getActiveQueueEntries(ws: Workspace, contentId: string): PipelineItem[] {
+  return ws.pipeline.filter(
+    (p) => p.draftId === contentId && (p.status === "queued" || p.status === "scheduled"),
+  );
+}
+
+export function hasActiveQueueEntry(ws: Workspace, contentId: string): boolean {
+  return getActiveQueueEntries(ws, contentId).length > 0;
+}
+
+export function dedupeActivePipeline(pipeline: PipelineItem[]): PipelineItem[] {
+  const published = pipeline.filter((p) => p.status === "published");
+  const active = pipeline
+    .filter((p) => p.status === "queued" || p.status === "scheduled")
+    .sort((a, b) => +new Date(a.when) - +new Date(b.when));
+  const seen = new Set<string>();
+  const uniqueActive: PipelineItem[] = [];
+  for (const item of active) {
+    if (seen.has(item.draftId)) continue;
+    seen.add(item.draftId);
+    uniqueActive.push(item);
+  }
+  return [...uniqueActive, ...published];
+}
+
 export function normalizeWorkspace(ws: Workspace): Workspace {
   const mergedDrafts = [...ws.drafts];
   for (const item of ws.published ?? []) {
@@ -30,12 +55,13 @@ export function normalizeWorkspace(ws: Workspace): Workspace {
     }
   }
 
+  const pipeline = dedupeActivePipeline(ws.pipeline);
   const drafts = mergedDrafts.map((draft) => ({
     ...draft,
-    lifecycle: inferLifecycle(draft.id, ws.pipeline, draft.lifecycle ?? "draft"),
+    lifecycle: inferLifecycle(draft.id, pipeline, draft.lifecycle ?? "draft"),
   }));
 
-  return { ...ws, drafts, published: [] };
+  return { ...ws, drafts, published: [], pipeline };
 }
 
 export function getDraftItems(ws: Workspace): Draft[] {
@@ -70,6 +96,8 @@ export function queueContent(
   draft: Draft,
   options: { when?: string; status?: PipelineItem["status"] } = {},
 ): Workspace {
+  if (hasActiveQueueEntry(ws, draft.id)) return ws;
+
   const when = options.when ?? new Date(Date.now() + 86400000).toISOString();
   const status = options.status ?? "scheduled";
   const channelId = channelForDraft(draft);
@@ -78,7 +106,7 @@ export function queueContent(
   return {
     ...ws,
     drafts: upsertContent(ws.drafts, queued),
-    pipeline: [
+    pipeline: dedupeActivePipeline([
       {
         id: `p_${Date.now()}`,
         draftId: draft.id,
@@ -87,8 +115,8 @@ export function queueContent(
         when,
         status,
       },
-      ...ws.pipeline.filter((p) => !(p.draftId === draft.id && p.status !== "published")),
-    ],
+      ...ws.pipeline,
+    ]),
   };
 }
 

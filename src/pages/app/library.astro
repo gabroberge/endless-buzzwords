@@ -38,6 +38,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     findContent,
     getDraftItems,
     getPublishedPipelineItems,
+    hasActiveQueueEntry,
     queueContent,
   } from "../../lib/content-lifecycle";
   import { computeOpsMetrics } from "../../lib/metrics";
@@ -102,8 +103,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
     title: string,
     when: string,
     channelId: string,
-    draft?: Draft,
-    canRequeue = false,
+    draft: Draft | undefined,
+    queued: boolean,
   ): string {
     const meta = metaParts([
       formatDate(when),
@@ -112,8 +113,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
       draft && buzzOf(draft) > 0 ? `${buzzOf(draft)} buzzwords` : "",
     ]);
 
-    const action =
-      canRequeue && draft
+    const action = queued
+      ? `<div class="lib-row__action"><span class="lib-row__status">Queued</span></div>`
+      : draft
         ? `<div class="lib-row__action">
           <button class="btn btn-ghost btn-sm" type="button" data-rqueue="${draft.id}">Re-queue</button>
         </div>`
@@ -141,6 +143,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   function queueDraft(draft: Draft) {
+    const ws = loadWorkspace();
+    if (hasActiveQueueEntry(ws, draft.id)) return;
     updateWorkspace((s) => queueContent(s, draft));
     showToast("Queued");
     window.dispatchEvent(new Event("eb:workspace"));
@@ -180,7 +184,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
         ? publishedItems
             .map((p) => {
               const draft = findDraft(ws, p.draftId);
-              return publishedRow(p.title, p.when, p.channelId, draft, Boolean(draft));
+              const queued = hasActiveQueueEntry(ws, p.draftId);
+              return publishedRow(p.title, p.when, p.channelId, draft, queued);
             })
             .join("")
         : emptyRow("Nothing published yet", "Advance items from Pipeline.");
@@ -375,6 +380,15 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   .lib-list :global(.lib-row__action) {
     flex-shrink: 0;
+  }
+
+  .lib-list :global(.lib-row__status) {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--accent-hover);
+    letter-spacing: 0.01em;
   }
 
   .lib-list :global(.lib-empty) {
