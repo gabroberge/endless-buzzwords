@@ -1,3 +1,4 @@
+import { composeDraft } from "./content-engine";
 import type { Draft } from "./content-engine";
 import type { ChannelId, PipelineItem, Workspace } from "./storage";
 
@@ -47,6 +48,38 @@ export function dedupeActivePipeline(pipeline: PipelineItem[]): PipelineItem[] {
   return [...uniqueActive, ...published];
 }
 
+const channelHintByChannel: Record<ChannelId, Draft["channelHint"]> = {
+  linkedin: "linkedin",
+  x: "x",
+  youtube: "youtube",
+  facebook: "linkedin",
+};
+
+function seedFromId(id: string): number {
+  return id.split("").reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 0);
+}
+
+export function synthesizeContentFromPipeline(item: PipelineItem): Draft {
+  const seed = seedFromId(item.draftId);
+  const base = composeDraft({ topicId: "apis", formatId: "field-note", voiceId: "desk", seed });
+  return {
+    ...base,
+    id: item.draftId,
+    title: item.title,
+    channelHint: channelHintByChannel[item.channelId] ?? "linkedin",
+    createdAt: item.when,
+  };
+}
+
+function ensurePipelineContent(drafts: Draft[], pipeline: PipelineItem[]): Draft[] {
+  const next = [...drafts];
+  for (const item of pipeline) {
+    if (next.some((draft) => draft.id === item.draftId)) continue;
+    next.push(synthesizeContentFromPipeline(item));
+  }
+  return next;
+}
+
 export function normalizeWorkspace(ws: Workspace): Workspace {
   const mergedDrafts = [...ws.drafts];
   for (const item of ws.published ?? []) {
@@ -56,7 +89,8 @@ export function normalizeWorkspace(ws: Workspace): Workspace {
   }
 
   const pipeline = dedupeActivePipeline(ws.pipeline);
-  const drafts = mergedDrafts.map((draft) => ({
+  const withContent = ensurePipelineContent(mergedDrafts, pipeline);
+  const drafts = withContent.map((draft) => ({
     ...draft,
     lifecycle: inferLifecycle(draft.id, pipeline, draft.lifecycle ?? "draft"),
   }));

@@ -1,5 +1,5 @@
 import type { BylineId, VoiceId } from "./data/voice";
-import type { Draft } from "./content-engine";
+import { composeDraft, type Draft } from "./content-engine";
 import { normalizeWorkspace } from "./content-lifecycle";
 import type { CoverageMap } from "./coverage-engine";
 
@@ -43,6 +43,25 @@ export const defaultChannels: Channel[] = [
   { id: "facebook", label: "Facebook", connected: false },
 ];
 
+function seedDrafts(): Draft[] {
+  const specs = [
+    { id: "seed1", title: "Field note · API design", topicId: "apis", formatId: "field-note" as const, seed: 1001 },
+    { id: "seed2", title: "Sync vs async for exports", topicId: "apis", formatId: "quick-take" as const, seed: 1002 },
+    { id: "seed3", title: "Debug prompt · worker lag", topicId: "system-design", formatId: "debug-prompt" as const, seed: 1003 },
+    { id: "seed4", title: "60-second script · caching", topicId: "caching", formatId: "short-script" as const, seed: 1004 },
+  ];
+
+  return specs.map((spec) => {
+    const draft = composeDraft({
+      topicId: spec.topicId,
+      formatId: spec.formatId,
+      voiceId: "desk",
+      seed: spec.seed,
+    });
+    return { ...draft, id: spec.id, title: spec.title };
+  });
+}
+
 function seedPipeline(): PipelineItem[] {
   const now = Date.now();
   const day = 86400000;
@@ -52,8 +71,8 @@ function seedPipeline(): PipelineItem[] {
       draftId: "seed1",
       title: "Field note · API design",
       channelId: "linkedin",
-      when: new Date(now - day).toISOString(),
-      status: "published",
+      when: new Date(now + day).toISOString(),
+      status: "scheduled",
     },
     {
       id: "p2",
@@ -91,7 +110,7 @@ export function createWorkspace(): Workspace {
     cadenceTarget: 5,
     focusTopics: ["apis", "system-design", "caching", "react"],
     channels: structuredClone(defaultChannels),
-    drafts: [],
+    drafts: seedDrafts(),
     published: [],
     pipeline: seedPipeline(),
     coverage: null,
