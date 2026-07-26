@@ -3,65 +3,195 @@ import AppLayout from "../../layouts/AppLayout.astro";
 ---
 
 <AppLayout title="Library" eyebrow="Archive">
-  <section class="library">
+  <section class="library-page">
     <div class="card intro">
-      <h2>Drafts and published pieces</h2>
-      <p class="muted">Your content library — saved locally. Re-queue anything when you need to fill a slot.</p>
+      <div class="intro__copy">
+        <h2>Drafts and published pieces</h2>
+        <p class="muted">Your content library — saved locally. Re-queue anything when you need to fill a slot.</p>
+      </div>
+      <p class="intro__summary" id="summary" aria-live="polite"></p>
     </div>
-    <div class="grid">
-      <article class="card panel">
-        <h3>Drafts</h3>
-        <ul id="drafts" class="list"></ul>
-      </article>
-      <article class="card panel">
-        <h3>Recently published</h3>
-        <ul id="published" class="list"></ul>
-      </article>
+
+    <div class="library-grid">
+      <section class="panel">
+        <header class="panel__head">
+          <h3>Drafts</h3>
+          <span class="panel__count" id="draft-count"></span>
+        </header>
+        <ul id="drafts" class="lib-list" aria-label="Drafts"></ul>
+      </section>
+
+      <section class="panel">
+        <header class="panel__head">
+          <h3>Recently published</h3>
+          <span class="panel__count" id="published-count"></span>
+        </header>
+        <ul id="published" class="lib-list" aria-label="Recently published"></ul>
+      </section>
     </div>
   </section>
 </AppLayout>
 
 <script>
+  import type { Draft } from "../../lib/content-engine";
+  import { computeOpsMetrics } from "../../lib/metrics";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { formatDate, showToast } from "../../lib/ui";
+  import { authorityLabel } from "../../lib/transforms";
+
+  const channelLabels: Record<string, string> = {
+    linkedin: "LinkedIn",
+    x: "X",
+    youtube: "YouTube",
+    facebook: "Facebook",
+  };
+
+  function formatLabel(id: string): string {
+    return id.replaceAll("-", " ");
+  }
+
+  function findDraft(ws: ReturnType<typeof loadWorkspace>, draftId: string): Draft | undefined {
+    return ws.drafts.find((d) => d.id === draftId) ?? ws.published.find((d) => d.id === draftId);
+  }
+
+  function tierOf(d: Draft): number {
+    return d.authorityTier ?? Math.max(0, (d.seniority ?? 2) - 2);
+  }
+
+  function buzzOf(d: Draft): number {
+    return d.buzzwordCount ?? d.buzzwords ?? 0;
+  }
+
+  function metaParts(parts: string[]): string {
+    return parts
+      .filter(Boolean)
+      .map((part) => `<span>${part}</span>`)
+      .join('<span class="lib-row__sep" aria-hidden="true">·</span>');
+  }
+
+  function draftRow(d: Draft): string {
+    const meta = metaParts([
+      formatDate(d.createdAt),
+      formatLabel(d.formatId),
+      authorityLabel(tierOf(d)),
+      buzzOf(d) > 0 ? `${buzzOf(d)} buzzwords` : "",
+    ]);
+
+    return `
+      <li class="lib-row">
+        <div class="lib-row__main">
+          <div class="lib-row__head">
+            <span class="lib-row__badge lib-row__badge--draft">Draft</span>
+            <h4 class="lib-row__title">${d.title}</h4>
+          </div>
+          <p class="lib-row__meta">${meta}</p>
+        </div>
+        <div class="lib-row__action">
+          <button class="btn btn-ghost btn-sm" type="button" data-queue="${d.id}">Queue</button>
+        </div>
+      </li>`;
+  }
+
+  function publishedRow(
+    title: string,
+    when: string,
+    channelId: string,
+    draft?: Draft,
+    canRequeue = false,
+  ): string {
+    const meta = metaParts([
+      formatDate(when),
+      channelLabels[channelId] ?? channelId,
+      draft ? authorityLabel(tierOf(draft)) : "",
+      draft && buzzOf(draft) > 0 ? `${buzzOf(draft)} buzzwords` : "",
+    ]);
+
+    const action =
+      canRequeue && draft
+        ? `<div class="lib-row__action">
+          <button class="btn btn-ghost btn-sm" type="button" data-rqueue="${draft.id}">Re-queue</button>
+        </div>`
+        : "";
+
+    return `
+      <li class="lib-row">
+        <div class="lib-row__main">
+          <div class="lib-row__head">
+            <span class="lib-row__badge lib-row__badge--published">Published</span>
+            <h4 class="lib-row__title">${title}</h4>
+          </div>
+          <p class="lib-row__meta">${meta}</p>
+        </div>
+        ${action}
+      </li>`;
+  }
+
+  function emptyRow(title: string, note: string): string {
+    return `
+      <li class="lib-empty">
+        <p class="lib-empty__title">${title}</p>
+        <p class="lib-empty__note muted">${note}</p>
+      </li>`;
+  }
+
+  function queueDraft(draft: Draft) {
+    updateWorkspace((s) => ({
+      ...s,
+      pipeline: [
+        {
+          id: `p_${Date.now()}`,
+          draftId: draft.id,
+          title: draft.title,
+          channelId: draft.channelHint === "x" ? "x" : draft.channelHint === "youtube" ? "youtube" : "linkedin",
+          when: new Date(Date.now() + 86400000).toISOString(),
+          status: "scheduled" as const,
+        },
+        ...s.pipeline,
+      ],
+    }));
+    showToast("Queued");
+    window.dispatchEvent(new Event("eb:workspace"));
+    render();
+  }
 
   function render() {
     const ws = loadWorkspace();
-    const drafts = document.getElementById("drafts");
-    const published = document.getElementById("published");
+    const metrics = computeOpsMetrics(ws);
+    const publishedItems = ws.pipeline
+      .filter((p) => p.status === "published")
+      .sort((a, b) => +new Date(b.when) - +new Date(a.when));
 
-    if (drafts) {
-      drafts.innerHTML = ws.drafts.length
-        ? ws.drafts
-            .map(
-              (d) => `
-        <li>
-          <div>
-            <strong>${d.title}</strong>
-            <p class="muted">${d.formatId.replaceAll("-", " ")} · ${formatDate(d.createdAt)}</p>
-          </div>
-          <button class="btn btn-ghost btn-sm" type="button" data-queue="${d.id}">Queue</button>
-        </li>`,
-            )
-            .join("")
-        : `<li><div><strong>Empty</strong><p class="muted">Compose to build your library.</p></div></li>`;
+    const summary = document.getElementById("summary");
+    if (summary) {
+      summary.textContent = `${ws.drafts.length} drafts · ${publishedItems.length} published · Original thoughts: ${metrics.originalThoughts}`;
     }
 
-    if (published) {
-      const items = ws.pipeline.filter((p) => p.status === "published");
-      published.innerHTML = items.length
-        ? items
-            .map(
-              (p) => `
-        <li>
-          <div>
-            <strong>${p.title}</strong>
-            <p class="muted">${p.channelId} · ${formatDate(p.when)}</p>
-          </div>
-        </li>`,
-            )
+    const draftCount = document.getElementById("draft-count");
+    if (draftCount) draftCount.textContent = String(ws.drafts.length);
+
+    const publishedCount = document.getElementById("published-count");
+    if (publishedCount) publishedCount.textContent = String(publishedItems.length);
+
+    const drafts = document.getElementById("drafts");
+    if (drafts) {
+      drafts.innerHTML = ws.drafts.length
+        ? [...ws.drafts]
+            .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
+            .map((d) => draftRow(d))
             .join("")
-        : `<li><div><strong>Nothing published yet</strong><p class="muted">Advance items from Pipeline.</p></div></li>`;
+        : emptyRow("Empty", "Compose to build your library.");
+    }
+
+    const published = document.getElementById("published");
+    if (published) {
+      published.innerHTML = publishedItems.length
+        ? publishedItems
+            .map((p) => {
+              const draft = findDraft(ws, p.draftId);
+              return publishedRow(p.title, p.when, p.channelId, draft, Boolean(draft));
+            })
+            .join("")
+        : emptyRow("Nothing published yet", "Advance items from Pipeline.");
     }
 
     document.querySelectorAll("[data-queue]").forEach((btn) => {
@@ -69,23 +199,17 @@ import AppLayout from "../../layouts/AppLayout.astro";
         const id = (btn as HTMLElement).dataset.queue;
         const draft = loadWorkspace().drafts.find((d) => d.id === id);
         if (!draft) return;
-        updateWorkspace((s) => ({
-          ...s,
-          pipeline: [
-            {
-              id: `p_${Date.now()}`,
-              draftId: draft.id,
-              title: draft.title,
-              channelId: draft.channelHint === "x" ? "x" : draft.channelHint === "youtube" ? "youtube" : "linkedin",
-              when: new Date(Date.now() + 86400000).toISOString(),
-              status: "scheduled" as const,
-            },
-            ...s.pipeline,
-          ],
-        }));
-        showToast("Queued");
-        window.dispatchEvent(new Event("eb:workspace"));
-        render();
+        queueDraft(draft);
+      });
+    });
+
+    document.querySelectorAll("[data-rqueue]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = (btn as HTMLElement).dataset.rqueue;
+        const wsNow = loadWorkspace();
+        const draft = findDraft(wsNow, id!);
+        if (!draft) return;
+        queueDraft(draft);
       });
     });
   }
@@ -94,63 +218,214 @@ import AppLayout from "../../layouts/AppLayout.astro";
 </script>
 
 <style>
+  .library-page {
+    display: grid;
+    gap: 1rem;
+  }
+
   .intro {
-    padding: 1.15rem;
-    margin-bottom: 1rem;
+    padding: 1.25rem 1.3rem;
+    display: grid;
+    gap: 0.65rem;
   }
 
   .intro h2 {
     font-family: var(--font-body);
     font-size: 1.1rem;
+    font-weight: 750;
     margin-bottom: 0.35rem;
   }
 
-  .grid {
+  .intro__copy .muted {
+    font-size: 0.92rem;
+    line-height: 1.55;
+    max-width: 42rem;
+  }
+
+  .intro__summary {
+    margin: 0;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    letter-spacing: 0.01em;
+  }
+
+  .library-grid {
     display: grid;
     gap: 1rem;
+    align-items: start;
   }
 
   .panel {
-    padding: 1.15rem;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--elevated);
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+    align-self: start;
   }
 
-  .panel h3 {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    margin-bottom: 0.85rem;
-  }
-
-  .list {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  .list li {
+  .panel__head {
     display: flex;
+    align-items: baseline;
     justify-content: space-between;
-    gap: 1rem;
-    align-items: center;
-    padding-bottom: 0.75rem;
+    gap: 0.75rem;
+    padding: 0.7rem 1rem;
     border-bottom: 1px solid var(--line);
+    background: #f8fafc;
   }
 
-  .list li:last-child {
+  .panel__head h3 {
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    font-weight: 750;
+    margin: 0;
+    line-height: 1.2;
+  }
+
+  .panel__count {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .lib-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Client-rendered rows */
+  .lib-list :global(.lib-row) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+    padding: 0.72rem 1rem;
+    border-bottom: 1px solid var(--line);
+    transition:
+      background 0.18s var(--ease),
+      border-color 0.18s var(--ease);
+  }
+
+  .lib-list :global(.lib-row:last-child) {
     border-bottom: none;
   }
 
-  .list strong {
-    display: block;
-    font-size: 0.94rem;
+  .lib-list :global(.lib-row:hover) {
+    background: rgba(12, 143, 124, 0.04);
   }
 
-  .list .muted {
+  .lib-list :global(.lib-row__main) {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .lib-list :global(.lib-row__head) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.55rem;
+    margin-bottom: 0.28rem;
+  }
+
+  .lib-list :global(.lib-row__badge) {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.14rem 0.48rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+
+  .lib-list :global(.lib-row__badge--draft) {
+    background: var(--surface-2);
+    color: var(--ink-muted);
+  }
+
+  .lib-list :global(.lib-row__badge--published) {
+    background: rgba(12, 143, 124, 0.12);
+    color: var(--accent-hover);
+  }
+
+  .lib-list :global(.lib-row__title) {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    font-weight: 750;
+    line-height: 1.3;
+    color: var(--ink);
+    min-width: 0;
+  }
+
+  .lib-list :global(.lib-row__meta) {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.28rem 0.35rem;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    line-height: 1.35;
+  }
+
+  .lib-list :global(.lib-row__sep) {
+    color: var(--line-strong, #d0d5dd);
+    font-weight: 500;
+    user-select: none;
+  }
+
+  .lib-list :global(.lib-row__action) {
+    flex-shrink: 0;
+  }
+
+  .lib-list :global(.lib-empty) {
+    padding: 1rem 1rem 1.05rem;
+  }
+
+  .lib-list :global(.lib-empty__title) {
+    margin: 0 0 0.2rem;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .lib-list :global(.lib-empty__note) {
+    margin: 0;
     font-size: 0.8rem;
-    margin-top: 0.2rem;
+    line-height: 1.45;
   }
 
   @media (min-width: 860px) {
-    .grid {
+    .library-grid {
       grid-template-columns: 1fr 1fr;
+    }
+
+    .lib-list :global(.lib-row) {
+      padding: 0.68rem 1rem;
+    }
+
+    .lib-list :global(.lib-row__action) {
+      margin-left: auto;
+    }
+  }
+
+  @media (max-width: 859px) {
+    .lib-list :global(.lib-row) {
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .lib-list :global(.lib-row__action) {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      padding-top: 0.15rem;
     }
   }
 </style>
