@@ -39,12 +39,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
     <aside class="card aside">
       <h2>How brand settings are used</h2>
       <p class="muted">
-        Voice becomes the default framing in Compose. Byline controls how posts are attributed in the desk. Cadence sets the weekly publishing target on Pipeline.
+        Voice sets the default seniority in Compose. Cadence is your weekly posting target on Pipeline. Byline controls attribution — and how much human presence shows up.
       </p>
       <ul>
         <li>Focus topics bias Compose defaults</li>
         <li>Channel connections live under Channels</li>
-        <li>Desk state persists in localStorage</li>
+        <li>Workspace state persists in localStorage</li>
       </ul>
       <p class="muted tiny" id="density"></p>
     </aside>
@@ -90,7 +90,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
       </label>`,
       )
       .join("");
-    densityEl.textContent = `Lived-experience density: ${computeOpsMetrics(ws).experienceDensity}`;
+    densityEl.textContent = `Original thoughts: ${computeOpsMetrics(ws).originalThoughts} · Human presence: ${computeOpsMetrics(ws).humanReview.toLowerCase()}`;
   }
 
   document.getElementById("form")?.addEventListener("submit", (e) => {

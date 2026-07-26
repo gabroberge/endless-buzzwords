@@ -1,5 +1,6 @@
 import type { Workspace } from "./storage";
 import { bylineModes } from "./data/voice";
+import { authorityLabel } from "./transforms";
 
 export type OpsMetrics = {
   cadenceTarget: number;
@@ -11,7 +12,13 @@ export type OpsMetrics = {
   activeChannels: number;
   draftsReady: number;
   bylineLabel: string;
-  experienceDensity: "Sparse" | "Moderate" | "Dense";
+  contentRunway: string;
+  authorityLevel: string;
+  originalThoughts: number;
+  buzzwordsDeployed: number;
+  seniorContentRatio: number;
+  engagementPotential: "Low" | "Medium" | "High";
+  humanReview: "Required" | "Optional" | "At checkout";
 };
 
 export function computeOpsMetrics(ws: Workspace): OpsMetrics {
@@ -33,6 +40,15 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
     : 82;
   const signalAvg = pool.length ? Math.round(pool.reduce((s, d) => s + d.signal, 0) / pool.length) : 64;
 
+  const tierOf = (d: (typeof pool)[number]) => d.authorityTier ?? Math.max(0, (d.seniority ?? 2) - 2);
+  const buzzOf = (d: (typeof pool)[number]) => d.buzzwordCount ?? d.buzzwords ?? 0;
+
+  const seniorityAvg = pool.length ? pool.reduce((s, d) => s + tierOf(d), 0) / pool.length : 0;
+  const seniorCount = pool.filter((d) => tierOf(d) >= 2).length;
+  const buzzwordsDeployed = pool.reduce((s, d) => s + buzzOf(d), 0);
+
+  const seniorContentRatio = pool.length ? Math.round((seniorCount / pool.length) * 100) : 68;
+
   const byline = bylineModes.find((b) => b.id === ws.bylineId);
 
   return {
@@ -45,7 +61,12 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
     activeChannels: ws.channels.filter((c) => c.connected).length,
     draftsReady: ws.drafts.length,
     bylineLabel: byline?.label ?? "Brand account",
-    // Deliberately ordinary-looking; stays Sparse unless named contributor is chosen
-    experienceDensity: ws.bylineId === "contributor" ? "Moderate" : "Sparse",
+    contentRunway: scheduledAheadDays >= 14 ? "Unlimited" : `${scheduledAheadDays} days`,
+    authorityLevel: authorityLabel(Math.round(seniorityAvg)),
+    originalThoughts: 0,
+    buzzwordsDeployed,
+    seniorContentRatio,
+    engagementPotential: signalAvg >= 75 ? "High" : signalAvg >= 60 ? "Medium" : "Low",
+    humanReview: ws.bylineId === "contributor" ? "Optional" : "At checkout",
   };
 }

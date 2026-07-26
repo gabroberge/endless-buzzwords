@@ -49,7 +49,7 @@ const links = [
   function refresh() {
     const ws = loadWorkspace();
     const el = document.querySelector("[data-cadence-note]");
-    if (el) el.textContent = `${ws.cadenceTarget}/week cadence target`;
+    if (el) el.textContent = `${ws.cadenceTarget}/week · runway unlimited`;
   }
   refresh();
   window.addEventListener("eb:workspace", refresh);

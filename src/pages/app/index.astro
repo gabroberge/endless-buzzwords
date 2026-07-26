@@ -24,9 +24,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
       </article>
 
       <article class="card panel panel--cta">
-        <p class="eyebrow">Keep the desk moving</p>
+        <p class="eyebrow">Never let the feed go quiet</p>
         <h2>Fill next week's slots</h2>
-        <p class="muted">Compose a draft, queue it to a channel, and keep coverage balanced across your topics.</p>
+        <p class="muted">Compose a draft, queue it to a channel, and keep your content runway unlimited.</p>
         <div class="actions">
           <a class="btn btn-accent" href="/app/compose">Open Compose</a>
           <a class="btn btn-ghost" href="/app/coverage">Review coverage</a>
@@ -38,6 +38,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import { computeOpsMetrics } from "../../lib/metrics";
+  import { authorityLabel } from "../../lib/transforms";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { formatDay, showToast } from "../../lib/ui";
 
@@ -49,13 +50,13 @@ import AppLayout from "../../layouts/AppLayout.astro";
     if (metrics) {
       const cards = [
         ["Cadence", `${m.publishedThisWeek} / ${m.cadenceTarget} this week`],
-        ["Scheduled ahead", `${m.scheduledAheadDays} days`],
-        ["Coverage breadth", `${m.coverageBreadth}%`],
-        ["On-message", `${m.onMessageAvg}%`],
-        ["Signal strength", `${m.signalAvg}`],
-        ["Active channels", String(m.activeChannels)],
-        ["Drafts ready", String(m.draftsReady)],
-        ["Byline", m.bylineLabel],
+        ["Content runway", m.contentRunway],
+        ["Authority", m.authorityLevel],
+        ["Buzzwords deployed", String(m.buzzwordsDeployed)],
+        ["Original thoughts", String(m.originalThoughts)],
+        ["Senior content ratio", `${m.seniorContentRatio}%`],
+        ["Engagement potential", m.engagementPotential],
+        ["Human review", m.humanReview],
       ];
       metrics.innerHTML = cards
         .map(
@@ -98,12 +99,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
           <li>
             <div>
               <strong>${d.title}</strong>
-              <p class="muted">${d.formatId.replaceAll("-", " ")} · signal ${d.signal}</p>
+              <p class="muted">${d.formatId.replaceAll("-", " ")} · authority ${authorityLabel(d.authorityTier ?? Math.max(0, (d.seniority ?? 2) - 2)).toLowerCase()}</p>
             </div>
           </li>`,
             )
             .join("")
-        : `<li><div><strong>No drafts yet</strong><p class="muted">Compose packages topics into channel-ready posts.</p></div></li>`;
+        : `<li><div><strong>No drafts yet</strong><p class="muted">Compose something. Seniority is adjustable.</p></div></li>`;
     }
   }
 

@@ -7,8 +7,13 @@ import {
   scriptBeats,
   threadBeats,
 } from "./data/templates";
-import { ctaLines, stakesPhrases, takeawayStarters, type VoiceId } from "./data/voice";
+import { stakesPhrases, type VoiceId } from "./data/voice";
 import { topics, topicById } from "./data/topics";
+import { applyTransform, authorityLabel, emptyDraftFlags, type DraftFlags, type TransformOutcome } from "./transforms";
+
+export type { DraftFlags, TransformOutcome };
+export { applyTransform, authorityLabel, emptyDraftFlags };
+export { getTransformControlState } from "./transforms";
 
 export type Draft = {
   id: string;
@@ -20,6 +25,11 @@ export type Draft = {
   channelHint: "linkedin" | "x" | "youtube" | "newsletter";
   signal: number;
   onMessage: number;
+  authorityTier: number;
+  buzzwordCount: number;
+  seniority: number;
+  buzzwords: number;
+  flags: DraftFlags;
   createdAt: string;
 };
 
@@ -53,22 +63,13 @@ function pickN<T>(rng: () => number, list: readonly T[], n: number): T[] {
   return out;
 }
 
-function hashSeed(input: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < input.length; i++) {
-    h ^= input.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return h >>> 0;
-}
-
 function bankFor(topicId: string) {
   return banks[topicId] ?? banks.default!;
 }
 
 function voiceWrap(voiceId: VoiceId, body: string, rng: () => number): string {
   if (voiceId === "curriculum") {
-    return `Lesson fragment\n\n${body}\n\nPractice: explain this to a teammate in two minutes.`;
+    return `Senior framing\n\n${body}\n\nPractice: explain this to a teammate who's been in the industry for ten years.`;
   }
   if (voiceId === "pointed") {
     const lines = body.split("\n").filter(Boolean);
@@ -79,6 +80,11 @@ function voiceWrap(voiceId: VoiceId, body: string, rng: () => number): string {
   }
   if (rng() > 0.55) return `${pick(rng, stakesPhrases)}\n\n${body}`;
   return body;
+}
+
+/** @deprecated Use authorityLabel from transforms */
+export function seniorityLabel(level: number): string {
+  return authorityLabel(Math.max(0, level - 2));
 }
 
 function composeFieldNote(rng: () => number, topicId: string): { title: string; body: string } {
@@ -155,7 +161,7 @@ function composeCurriculum(rng: () => number, topicId: string): { title: string;
   const topic = topicById[topicId]?.label ?? "Systems";
   const b = bankFor(topicId);
   return {
-    title: `Curriculum slice · ${topic}`,
+    title: `Lesson fragment · ${topic}`,
     body: [
       `Objective: reason about ${topic.toLowerCase()} under real constraints.`,
       "",
@@ -252,6 +258,11 @@ export function composeDraft(options: ComposeOptions = {}): Draft {
     channelHint: channelByFormat[formatId],
     signal: Math.round(52 + rng() * 40),
     onMessage: Math.round(70 + rng() * 25),
+    authorityTier: 0,
+    buzzwordCount: 0,
+    seniority: 2,
+    buzzwords: 0,
+    flags: emptyDraftFlags(),
     createdAt: new Date().toISOString(),
   };
 }
@@ -259,67 +270,19 @@ export function composeDraft(options: ComposeOptions = {}): Draft {
 export type TransformAction =
   | "linkedin"
   | "x"
-  | "cta"
-  | "takeaway"
-  | "sharpen"
-  | "soften"
-  | "stakes";
+  | "senior"
+  | "buzzwords"
+  | "urgency"
+  | "thought-leadership"
+  | "interview"
+  | "roadmap"
+  | "tradeoff"
+  | "controversial"
+  | "production";
 
+/** @deprecated Use applyTransform */
 export function transformDraft(draft: Draft, action: TransformAction): Draft {
-  const rng = mulberry32(hashSeed(draft.id + action + draft.body.length));
-  let { title, body, channelHint, signal, onMessage } = draft;
-
-  if (action === "linkedin") {
-    channelHint = "linkedin";
-    body = `${body}\n\n${pick(rng, ctaLines)}`;
-    title = draft.title.replace(/^Thread outline$/, "LinkedIn note");
-    signal = Math.min(99, signal + 3);
-  } else if (action === "x") {
-    channelHint = "x";
-    const compressed = body
-      .split("\n")
-      .filter((l) => l.trim())
-      .slice(0, 4)
-      .join("\n");
-    body = compressed.length > 240 ? compressed.slice(0, 237) + "…" : compressed;
-    title = "Compressed take";
-    signal = Math.min(99, signal + 2);
-  } else if (action === "cta") {
-    if (!ctaLines.some((c) => body.includes(c))) body = `${body}\n\n${pick(rng, ctaLines)}`;
-    signal = Math.min(99, signal + 4);
-  } else if (action === "takeaway") {
-    if (!/Takeaway:|If you change one thing:|Practical default:|What to write down:/.test(body)) {
-      const b = bankFor(draft.topicId);
-      body = `${body}\n\n${pick(rng, takeawayStarters)} ${pick(rng, b.closers)}`;
-    }
-    onMessage = Math.min(99, onMessage + 2);
-  } else if (action === "sharpen") {
-    body = body
-      .replace(/\bmaybe\b/gi, "")
-      .replace(/\bperhaps\b/gi, "")
-      .replace(/\. /g, ". ")
-      .replace(/\n{3,}/g, "\n\n");
-    const b = bankFor(draft.topicId);
-    if (!body.includes(pick(rng, b.closers))) {
-      body = `${body}\n\n${pick(rng, b.closers)}`;
-    }
-    signal = Math.min(99, signal + 1);
-  } else if (action === "soften") {
-    body = `One framing that tends to help:\n\n${body}\n\nYour constraints may point elsewhere.`;
-    onMessage = Math.max(55, onMessage - 2);
-  } else if (action === "stakes") {
-    if (!stakesPhrases.some((p) => body.includes(p))) body = `${pick(rng, stakesPhrases)}\n\n${body}`;
-    signal = Math.min(99, signal + 5);
-  }
-
-  return {
-    ...draft,
-    title,
-    body,
-    channelHint,
-    signal,
-    onMessage,
-  };
+  return applyTransform(draft, action).draft;
 }
 
 export function draftText(draft: Draft): string {

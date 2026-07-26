@@ -6,7 +6,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   <section class="coverage">
     <aside class="card controls">
       <p class="muted">
-        Coverage shows which technical topics your brand is prepared to speak on in public. Refresh to rebalance emphasis.
+        Always know what to post about next. Build a map of technical topics so you never run out of runway.
       </p>
       <button class="btn btn-accent" type="button" id="build">Build coverage map</button>
       <button class="btn btn-ghost" type="button" id="rebalance">Rebalance emphasis</button>
@@ -17,7 +17,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
       <header>
         <div>
           <p class="eyebrow" id="audience">Audience</p>
-          <h2 id="title">Public topic coverage</h2>
+          <h2 id="title">Topic runway map</h2>
         </div>
         <span class="badge" id="breadth">Breadth —</span>
       </header>
@@ -59,7 +59,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     } else {
       render(rebalanceCoverage(current));
     }
-    showToast("Emphasis updated. Topic set unchanged.");
+    showToast("Emphasis updated. Same topics, different priority.");
   });
 
   document.getElementById("save")?.addEventListener("click", () => {

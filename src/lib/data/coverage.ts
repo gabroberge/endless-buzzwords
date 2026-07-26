@@ -38,16 +38,16 @@ export const coverageClusters: CoverageCluster[] = [
   },
 ];
 
-/** Rare easter egg cluster — not marketed, appears when regenerating coverage with a seed. */
+/** Rare cluster — appears when regenerating coverage with certain seeds. */
 export const easterEggCluster: CoverageCluster = {
   id: "adjacent",
   label: "Adjacent skills",
-  topics: ["Communication", "Setting™", "Estimation"],
+  topics: ["Soft skills", "Career growth", "Best practices"],
 };
 
 export const coverageAudiences = [
-  "bootcamp alumni networks",
-  "platform advocacy teams",
-  "developer education brands",
-  "technical community programs",
+  "senior engineers building in public",
+  "developer advocates on a posting schedule",
+  "technical creators with a content calendar",
+  "engineering leads who need to stay visible",
 ];

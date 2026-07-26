@@ -14,18 +14,23 @@ const { title, eyebrow = "Desk" } = Astro.props;
   </div>
   <div class="topbar__meta">
     <span class="badge" data-brand-badge>Brand</span>
+    <span class="badge badge-muted" data-authority-badge>Authority</span>
     <span class="badge badge-muted" data-channels-badge>Channels</span>
   </div>
 </header>
 
 <script>
   import { loadWorkspace } from "../../lib/storage";
+  import { computeOpsMetrics } from "../../lib/metrics";
 
   function refresh() {
     const ws = loadWorkspace();
+    const m = computeOpsMetrics(ws);
     const brand = document.querySelector("[data-brand-badge]");
+    const authority = document.querySelector("[data-authority-badge]");
     const channels = document.querySelector("[data-channels-badge]");
     if (brand) brand.textContent = ws.brandName;
+    if (authority) authority.textContent = `Authority: ${m.authorityLevel}`;
     if (channels) {
       const n = ws.channels.filter((c) => c.connected).length;
       channels.textContent = `${n} channels connected`;

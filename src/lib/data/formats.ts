@@ -24,7 +24,7 @@ export const formats: Format[] = [
   { id: "checklist", label: "Checklist", blurb: "A scannable set of reminders." },
   { id: "thread", label: "Thread outline", blurb: "A multi-beat narrative for social." },
   { id: "short-script", label: "Short script", blurb: "Spoken pacing for video." },
-  { id: "curriculum-slice", label: "Curriculum slice", blurb: "A lesson-shaped fragment." },
+  { id: "curriculum-slice", label: "Lesson fragment", blurb: "Looks educational. Ships fast." },
   { id: "tradeoff", label: "Tradeoff brief", blurb: "Costs and benefits, evenly weighted." },
   { id: "postmortem-lite", label: "Postmortem lite", blurb: "Incident texture without the incident." },
 ];

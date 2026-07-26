@@ -6,7 +6,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   <section>
     <div class="card intro">
       <h2>Connected destinations</h2>
-      <p class="muted">Connections are stored in this browser and used for pipeline routing. Nothing leaves your machine.</p>
+      <p class="muted">Connect channels to extract maximum output from every idea. One draft, every platform — stored locally in this browser.</p>
       <p class="status" id="status"></p>
     </div>
     <div class="grid" id="channels"></div>
@@ -21,7 +21,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     const ws = loadWorkspace();
     const active = ws.channels.filter((c) => c.connected).length;
     const status = document.getElementById("status");
-    if (status) status.textContent = `${active} channels ready for scheduling`;
+    if (status) status.textContent = `${active} channels ready · same idea, more surfaces`;
 
     const grid = document.getElementById("channels");
     if (!grid) return;

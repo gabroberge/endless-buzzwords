@@ -23,15 +23,18 @@ import AppLayout from "../../layouts/AppLayout.astro";
         <button class="btn btn-ghost" type="button" id="again">Compose again</button>
       </div>
 
-      <p class="hint muted">Adjustments</p>
+      <p class="hint muted">Transform</p>
       <div class="transform-grid">
+        <button class="btn btn-soft btn-sm" type="button" data-action="senior">Make it more senior</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="buzzwords">Add buzzwords</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="urgency">Add urgency</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="thought-leadership">Make it thought leadership</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="interview">Turn into interview question</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="roadmap">Repackage as roadmap</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="tradeoff">Add a tradeoff</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="production">Add production framing</button>
         <button class="btn btn-soft btn-sm" type="button" data-action="linkedin">Repackage for LinkedIn</button>
         <button class="btn btn-soft btn-sm" type="button" data-action="x">Compress for X</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="cta">Add a reply prompt</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="takeaway">Add a takeaway</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="sharpen">Sharpen the take</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="soften">Soften certainty</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="stakes">Raise the stakes</button>
       </div>
 
       <div class="persist-actions">
@@ -44,8 +47,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
     <article class="card canvas" aria-live="polite">
       <header class="canvas__meta">
         <span class="badge" id="channel">linkedin</span>
-        <span class="badge badge-muted" id="signal">Signal —</span>
-        <span class="badge badge-muted" id="onmsg">On-message —</span>
+        <span class="badge badge-muted" id="authority">Authority —</span>
+        <span class="badge badge-muted" id="buzzwords">Buzzwords —</span>
+        <span class="badge badge-muted" id="engagement">Engagement —</span>
         <span class="badge badge-warm" id="voice-badge">Voice</span>
       </header>
       <h2 id="title">Draft appears here</h2>
@@ -56,11 +60,13 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import {
+    applyTransform,
+    authorityLabel,
     composeDraft,
     draftText,
     formats,
+    getTransformControlState,
     topics,
-    transformDraft,
     type Draft,
     type TransformAction,
   } from "../../lib/content-engine";
@@ -74,8 +80,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
   const titleEl = document.getElementById("title")!;
   const bodyEl = document.getElementById("body")!;
   const channelEl = document.getElementById("channel")!;
-  const signalEl = document.getElementById("signal")!;
-  const onmsgEl = document.getElementById("onmsg")!;
+  const authorityEl = document.getElementById("authority")!;
+  const buzzwordsEl = document.getElementById("buzzwords")!;
+  const engagementEl = document.getElementById("engagement")!;
   const voiceBadge = document.getElementById("voice-badge")!;
 
   let current: Draft | null = null;
@@ -89,14 +96,33 @@ import AppLayout from "../../layouts/AppLayout.astro";
     .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label}</option>`)
     .join("");
 
+  function engagementLabel(signal: number): string {
+    if (signal >= 75) return "High";
+    if (signal >= 60) return "Medium";
+    return "Low";
+  }
+
   function render(draft: Draft) {
     current = draft;
     titleEl.textContent = draft.title;
     bodyEl.textContent = draft.body;
     channelEl.textContent = draft.channelHint;
-    signalEl.textContent = `Signal ${draft.signal}`;
-    onmsgEl.textContent = `On-message ${draft.onMessage}%`;
+    authorityEl.textContent = `Authority: ${authorityLabel(draft.authorityTier ?? 0)}`;
+    buzzwordsEl.textContent = `Buzzwords: ${draft.buzzwordCount ?? 0}`;
+    engagementEl.textContent = `Engagement: ${engagementLabel(draft.signal)}`;
     voiceBadge.textContent = voiceProfiles.find((v) => v.id === draft.voiceId)?.label ?? draft.voiceId;
+    updateTransformControls(draft);
+  }
+
+  function updateTransformControls(draft: Draft) {
+    document.querySelectorAll("[data-action]").forEach((btn) => {
+      const action = (btn as HTMLElement).dataset.action as TransformAction;
+      const state = getTransformControlState(draft, action);
+      const button = btn as HTMLButtonElement;
+      button.disabled = state.disabled;
+      button.textContent = state.label;
+      button.title = state.hint ?? "";
+    });
   }
 
   function create() {
@@ -119,9 +145,16 @@ import AppLayout from "../../layouts/AppLayout.astro";
         return;
       }
       const action = (btn as HTMLElement).dataset.action as TransformAction;
-      render(transformDraft(current, action));
+      const outcome = applyTransform(current, action);
+      render(outcome.draft);
+      if (!outcome.applied) {
+        showToast(outcome.message);
+        return;
+      }
       if (action === "linkedin" || action === "x") {
         showToast("Variant created without additional source material");
+      } else if (outcome.terminal) {
+        showToast(outcome.message);
       } else {
         showToast("Draft updated");
       }
@@ -174,11 +207,13 @@ import AppLayout from "../../layouts/AppLayout.astro";
   .compose {
     display: grid;
     gap: 1rem;
+    min-width: 0;
   }
 
   .controls,
   .canvas {
     padding: 1.15rem;
+    min-width: 0;
   }
 
   .controls {
@@ -210,6 +245,14 @@ import AppLayout from "../../layouts/AppLayout.astro";
     gap: 0.45rem;
   }
 
+  .transform-grid .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    white-space: normal;
+    line-height: 1.25;
+    text-align: center;
+  }
+
   .hint {
     font-size: 0.78rem;
     font-weight: 700;
@@ -228,6 +271,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
   .canvas h2 {
     font-size: 1.3rem;
     margin-bottom: 0.85rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .canvas pre {
@@ -237,7 +282,24 @@ import AppLayout from "../../layouts/AppLayout.astro";
     font-size: 0.92rem;
     line-height: 1.65;
     color: var(--ink-soft);
-    min-height: 16rem;
+    min-height: 12rem;
+    max-height: min(52vh, 28rem);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    padding-right: 0.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(10, 22, 40, 0.2) transparent;
+  }
+
+  .canvas pre::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .canvas pre::-webkit-scrollbar-thumb {
+    background: rgba(10, 22, 40, 0.18);
+    border-radius: 999px;
   }
 
   @media (min-width: 960px) {

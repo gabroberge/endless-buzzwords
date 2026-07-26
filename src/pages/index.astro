@@ -3,27 +3,62 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 ---
 
 <MarketingLayout
-  title="Endless Buzzwords™ — Technical presence, on a schedule"
-  description="Endless Buzzwords helps educator brands and developer advocacy teams keep a continuous technical presence across social channels."
+  title="Endless Buzzwords™ — Never run out of technical content"
+  description="Never run out of technical content again. One idea. Every platform. Endless Buzzwords keeps your feed technical, senior, and full."
 >
   <!-- Cold open: product in motion, brand as hero -->
   <section class="open">
     <div class="container-wide open__grid">
       <div class="open__copy">
-        <p class="eyebrow">Content operations for technical brands</p>
+        <p class="eyebrow">Technical content operations</p>
         <h1 class="open__brand">Endless Buzzwords<span>™</span></h1>
         <p class="open__lede">
-          Platforms reward continuity. Expertise alone does not publish itself. Endless Buzzwords keeps your technical presence on schedule.
+          Never run out of technical content again. Turn one idea into a week of posts — and keep your authority visible across every channel.
         </p>
         <div class="open__cta">
-          <a class="btn btn-primary" href="/app/compose">Open the desk</a>
-          <a class="btn btn-ghost" href="#product">See how packaging works</a>
+          <a class="btn btn-primary" href="/app/compose">Open workspace</a>
+          <a class="btn btn-ghost" href="#product">See the product</a>
         </div>
       </div>
 
-      <div class="feed-rail" aria-hidden="true">
-        <div class="feed-rail__label">Desk output · live sample</div>
-        <div class="feed-rail__stack" id="feed-stack"></div>
+      <div class="feed-rail" id="studio-preview">
+        <div class="feed-rail__label">Content Studio · Live</div>
+        <div class="studio-card" id="studio-card" aria-live="polite">
+          <div class="studio-meta">
+            <div class="studio-field">
+              <span class="studio-label">Topic</span>
+              <span class="studio-value" id="studio-topic">—</span>
+            </div>
+            <div class="studio-field">
+              <span class="studio-label">Format</span>
+              <span class="studio-value" id="studio-format">—</span>
+            </div>
+          </div>
+          <div class="studio-draft">
+            <h3 class="studio-title" id="studio-title">Generating…</h3>
+            <div class="studio-body-wrap">
+              <div class="studio-body" id="studio-body"></div>
+            </div>
+          </div>
+          <dl class="studio-metrics">
+            <div>
+              <dt>Authority</dt>
+              <dd id="studio-authority">—</dd>
+            </div>
+            <div>
+              <dt>Buzzwords</dt>
+              <dd id="studio-buzzwords">—</dd>
+            </div>
+            <div>
+              <dt>Engagement</dt>
+              <dd id="studio-engagement">—</dd>
+            </div>
+          </dl>
+          <div class="studio-actions">
+            <button class="studio-btn" type="button" data-transform="senior">Make it more senior</button>
+            <button class="studio-btn" type="button" data-transform="buzzwords">Add buzzwords</button>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -31,13 +66,13 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   <!-- Thesis -->
   <section class="thesis" id="thesis">
     <div class="container thesis__inner">
-      <h2>Your audience expects you to show up technically. Every week.</h2>
+      <h2>You need technical content. You need it constantly.</h2>
       <div class="thesis__cols">
         <p>
-          Bootcamps, educator brands, and advocacy teams are judged as much by their public cadence as by their curriculum. Gaps in the feed read like gaps in competence.
+          Algorithms reward posting. Posting rewards confidence. Confidence rewards sounding senior — whether or not you had a fresh thought this week.
         </p>
         <p>
-          Endless Buzzwords is the desk layer between what your brand knows and what your channels need: formats, voice, coverage, and a pipeline that stays full.
+          Endless Buzzwords keeps the feed full. Compose from a topic, repackage for every platform, and never let the pipeline go quiet.
         </p>
       </div>
     </div>
@@ -47,15 +82,15 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   <section class="product" id="product">
     <div class="container-wide">
       <div class="product__intro">
-        <p class="eyebrow">The desk</p>
-        <h2>Four surfaces. One publishing rhythm.</h2>
+        <p class="eyebrow">The product</p>
+        <h2>One idea. Every platform. Forever.</h2>
       </div>
 
       <div class="product__block">
         <div class="product__copy">
           <h3>Compose</h3>
           <p>
-            Start from a topic and a format — field note, tradeoff brief, debug prompt, short script. Adjust voice, add a takeaway, or repackage for LinkedIn or X without opening a blank page.
+            Start with a topic. Pick a format. Make it more senior, add buzzwords, turn it into thought leadership — or repackage the same idea for LinkedIn, X, and YouTube without starting over.
           </p>
         </div>
         <div class="card product__ui" id="compose-preview">
@@ -68,7 +103,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
         <div class="product__copy">
           <h3>Pipeline</h3>
           <p>
-            See what is scheduled, what is queued, and whether this week’s cadence is on track. Advance posts as they go out. Keep the next few days from going quiet.
+            See what's scheduled, what's queued, and how many days until the feed goes quiet. Advance posts as they go out. Never let the calendar run dry.
           </p>
         </div>
         <div class="card product__ui product__ui--light">
@@ -84,7 +119,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
         <div class="product__copy">
           <h3>Coverage</h3>
           <p>
-            Map the topics your brand is prepared to speak on. Spot thin areas before the calendar forces an awkward pivot. Rebalance emphasis when launches shift.
+            Map the topics you're prepared to post about. Spot gaps before you run out of things to sound authoritative on. Rebalance when a launch needs more airtime.
           </p>
         </div>
         <div class="card product__ui product__ui--light">
@@ -100,14 +135,14 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
         <div class="product__copy">
           <h3>Channels & brand</h3>
           <p>
-            Connect destinations, set a weekly cadence target, choose a default voice, and decide how posts are attributed — brand account, content desk, or named contributor.
+            Connect destinations, set a weekly cadence, and extract as much content as possible from the same idea. One draft becomes a thread, a post, and a short — automatically.
           </p>
         </div>
         <div class="card product__ui product__ui--light">
           <div class="mini-brand">
-            <div><span>Voice</span><strong>Brand desk</strong></div>
+            <div><span>Authority</span><strong>Senior</strong></div>
             <div><span>Cadence</span><strong>5 / week</strong></div>
-            <div><span>Byline</span><strong>Brand account</strong></div>
+            <div><span>Runway</span><strong>Unlimited</strong></div>
             <div><span>Channels</span><strong>2 connected</strong></div>
           </div>
         </div>
@@ -119,19 +154,19 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   <section class="who">
     <div class="container">
       <p class="eyebrow">Built for</p>
-      <h2>Teams that teach in public</h2>
+      <h2>Anyone who needs to stay technical and visible</h2>
       <ul class="who__list">
         <li>
-          <strong>Educator brands</strong>
-          <span>Keep social aligned with course launches without a full editorial staff.</span>
+          <strong>Developer creators</strong>
+          <span>Keep posting without waiting for inspiration to strike.</span>
         </li>
         <li>
-          <strong>Bootcamps</strong>
-          <span>Maintain a technical feed that matches what cohorts are learning.</span>
+          <strong>Engineering leads</strong>
+          <span>Maintain authority across LinkedIn, X, and YouTube from one workspace.</span>
         </li>
         <li>
-          <strong>Advocacy & community</strong>
-          <span>Package platform knowledge into a steady multi-channel rhythm.</span>
+          <strong>Technical brands</strong>
+          <span>Turn one launch into a month of content without hiring an editorial team.</span>
         </li>
       </ul>
     </div>
@@ -142,7 +177,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     <div class="container">
       <div class="plans__intro">
         <p class="eyebrow">Plans</p>
-        <h2>Sized to the desk, not the ego</h2>
+        <h2>Priced for volume, not originality</h2>
       </div>
       <div class="plans__grid">
         <article class="card plan">
@@ -157,14 +192,16 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
           <a class="btn btn-ghost btn-block" href="/app">Start on Studio</a>
         </article>
         <article class="card plan plan--featured">
-          <p class="badge">Common for teams</p>
-          <h3>Desk</h3>
+          <div class="plan__head">
+            <h3>Desk</h3>
+            <span class="badge">Common for teams</span>
+          </div>
           <p class="plan__price">$99<span>/mo</span></p>
           <ul>
             <li>Everything in Studio</li>
             <li>4 channels</li>
             <li>Coverage maps</li>
-            <li>Voice profiles + byline modes</li>
+            <li>Adaptive Seniority™</li>
           </ul>
           <a class="btn btn-primary btn-block" href="/app/compose">Open Desk</a>
         </article>
@@ -187,8 +224,8 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   <section class="close">
     <div class="container card close__panel">
       <div>
-        <h2>Keep the feed technical. Keep it moving.</h2>
-        <p class="muted">Open the desk, compose from your topics, and fill the pipeline before next week goes quiet.</p>
+        <h2>Stay technical. Stay visible.</h2>
+        <p class="muted">Your content runway is unlimited. Open the workspace and fill the pipeline before the feed goes quiet.</p>
       </div>
       <a class="btn btn-accent" href="/app/compose">Compose the next post</a>
     </div>
@@ -196,24 +233,117 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 </MarketingLayout>
 
 <script>
-  import { composeDraft, formats } from "../lib/content-engine";
+  import {
+    applyTransform,
+    authorityLabel,
+    composeDraft,
+    formats,
+    getTransformControlState,
+    type Draft,
+    type TransformAction,
+  } from "../lib/content-engine";
+  import { topicById } from "../lib/data/topics";
 
-  const stack = document.getElementById("feed-stack");
   const sample = document.getElementById("compose-sample");
+  const studioCard = document.getElementById("studio-card");
+  const studioTopic = document.getElementById("studio-topic");
+  const studioFormat = document.getElementById("studio-format");
+  const studioTitle = document.getElementById("studio-title");
+  const studioBody = document.getElementById("studio-body");
+  const studioAuthority = document.getElementById("studio-authority");
+  const studioBuzzwords = document.getElementById("studio-buzzwords");
+  const studioEngagement = document.getElementById("studio-engagement");
 
-  function cardHtml(seed: number) {
-    const d = composeDraft({ seed });
-    const format = formats.find((f) => f.id === d.formatId)?.label ?? d.formatId;
-    return `<article class="feed-card">
-      <header><span>${format}</span><span>${d.channelHint}</span></header>
-      <h3>${d.title}</h3>
-      <p>${d.body.split("\n").filter(Boolean).slice(0, 3).join(" ")}</p>
-    </article>`;
+  const heroSamples = [
+    { topicId: "apis", formatId: "debug-prompt" as const, voiceId: "pointed" as const, seed: 4242 },
+    { topicId: "caching", formatId: "field-note" as const, voiceId: "grounded" as const, seed: 8080 },
+    { topicId: "system-design", formatId: "tradeoff" as const, voiceId: "desk" as const, seed: 1337 },
+    { topicId: "observability", formatId: "quick-take" as const, voiceId: "curriculum" as const, seed: 9001 },
+  ];
+
+  let currentIndex = 0;
+  let currentDraft: Draft | null = null;
+  let rotateTimer: ReturnType<typeof setInterval> | null = null;
+  let userPaused = false;
+
+  function engagementLabel(signal: number): string {
+    if (signal >= 75) return "High";
+    if (signal >= 60) return "Medium";
+    return "Low";
   }
 
-  if (stack) {
-    stack.innerHTML = [1, 2, 3].map((n) => cardHtml(1000 + n * 97)).join("");
+  function renderStudio(draft: Draft) {
+    currentDraft = draft;
+    const topic = topicById[draft.topicId]?.label ?? draft.topicId;
+    const format = formats.find((f) => f.id === draft.formatId)?.label ?? draft.formatId;
+
+    if (studioTopic) studioTopic.textContent = topic;
+    if (studioFormat) studioFormat.textContent = format;
+    if (studioTitle) studioTitle.textContent = draft.title;
+    if (studioBody) studioBody.textContent = draft.body;
+    if (studioAuthority) studioAuthority.textContent = authorityLabel(draft.authorityTier ?? 0);
+    if (studioBuzzwords) studioBuzzwords.textContent = String(draft.buzzwordCount ?? 0);
+    if (studioEngagement) studioEngagement.textContent = engagementLabel(draft.signal);
+    updateStudioControls(draft);
   }
+
+  function updateStudioControls(draft: Draft) {
+    document.querySelectorAll("[data-transform]").forEach((btn) => {
+      const action = (btn as HTMLElement).dataset.transform as TransformAction;
+      const state = getTransformControlState(draft, action);
+      const button = btn as HTMLButtonElement;
+      button.disabled = state.disabled;
+      button.textContent = state.label;
+      button.title = state.hint ?? "";
+    });
+  }
+
+  function loadHeroSample(index: number, animate = false) {
+    const config = heroSamples[index]!;
+    const apply = () => renderStudio(composeDraft(config));
+
+    if (!animate || !studioCard) {
+      apply();
+      return;
+    }
+
+    studioCard.classList.add("is-fading");
+    window.setTimeout(() => {
+      apply();
+      studioCard.classList.remove("is-fading");
+    }, 220);
+  }
+
+  function startRotation() {
+    if (rotateTimer) clearInterval(rotateTimer);
+    rotateTimer = setInterval(() => {
+      if (userPaused) return;
+      currentIndex = (currentIndex + 1) % heroSamples.length;
+      loadHeroSample(currentIndex, true);
+    }, 5200);
+  }
+
+  loadHeroSample(0);
+  startRotation();
+
+  document.getElementById("studio-preview")?.addEventListener("mouseenter", () => {
+    userPaused = true;
+  });
+
+  document.getElementById("studio-preview")?.addEventListener("mouseleave", () => {
+    userPaused = false;
+  });
+
+  document.querySelectorAll("[data-transform]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!currentDraft) return;
+      userPaused = true;
+      const action = (btn as HTMLElement).dataset.transform as TransformAction;
+      const outcome = applyTransform(currentDraft, action);
+      renderStudio(outcome.draft);
+      studioCard?.classList.remove("is-fading");
+    });
+  });
 
   if (sample) {
     const d = composeDraft({ topicId: "apis", formatId: "field-note", voiceId: "grounded", seed: 2026 });
@@ -230,6 +360,10 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     display: grid;
     gap: 2.5rem;
     align-items: center;
+  }
+
+  .open__grid > * {
+    min-width: 0;
   }
 
   .open__brand {
@@ -267,57 +401,171 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     padding: 1rem;
     box-shadow: var(--shadow-lg);
     animation: float-y 8s ease-in-out infinite;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .feed-rail__label {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7ddec9;
+    margin-bottom: 0.9rem;
+    padding: 0 0.15rem;
+  }
+
+  .studio-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 16px;
+    padding: 1.1rem 1.15rem 1.15rem;
+    transition: opacity 0.22s ease;
+    min-width: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .studio-card.is-fading {
+    opacity: 0.35;
+  }
+
+  .studio-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.9rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .studio-field {
+    display: grid;
+    gap: 0.2rem;
+  }
+
+  .studio-label {
+    font-size: 0.68rem;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #8fa3b8;
-    margin-bottom: 0.85rem;
-    padding: 0 0.35rem;
   }
 
-  .feed-rail__stack {
+  .studio-value {
+    font-size: 0.88rem;
+    font-weight: 650;
+    color: #e8eef7;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .studio-draft {
     display: grid;
-    gap: 0.75rem;
+    gap: 0.55rem;
+    min-width: 0;
   }
 
-  .feed-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 0.9rem 1rem;
-  }
-
-  .feed-card header {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.5rem;
-    font-size: 0.72rem;
-    font-weight: 700;
-    color: #7ddec9;
-    margin-bottom: 0.45rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  .feed-card h3 {
+  .studio-title {
     font-family: var(--font-body);
-    font-size: 0.95rem;
+    font-size: 1rem;
+    font-weight: 750;
     color: #fff;
-    margin-bottom: 0.4rem;
+    margin: 0;
+    line-height: 1.35;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow-wrap: anywhere;
   }
 
-  .feed-card p {
-    font-size: 0.82rem;
+  .studio-body-wrap {
+    min-height: 7.5rem;
+    overflow: visible;
+  }
+
+  .studio-body {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: var(--font-body);
+    font-size: 0.84rem;
     line-height: 1.5;
     color: #b7c6d6;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .studio-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin: 0.85rem 0 0.95rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    flex-shrink: 0;
+  }
+
+  .studio-metrics div {
+    display: grid;
+    gap: 0.15rem;
+  }
+
+  .studio-metrics dt {
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #8fa3b8;
+  }
+
+  .studio-metrics dd {
+    margin: 0;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #e8eef7;
+  }
+
+  .studio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+
+  .studio-btn {
+    flex: 1 1 calc(50% - 0.25rem);
+    min-width: 0;
+    max-width: 100%;
+    padding: 0.38rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+    text-align: center;
+    white-space: normal;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #d7e4f0;
+    transition:
+      background 0.2s var(--ease),
+      border-color 0.2s var(--ease);
+  }
+
+  .studio-btn:hover:not(:disabled) {
+    background: rgba(125, 222, 201, 0.12);
+    border-color: rgba(125, 222, 201, 0.35);
+    color: #fff;
+  }
+
+  .studio-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .thesis {
@@ -518,42 +766,75 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
   }
 
   .plans {
-    padding: clamp(3rem, 7vw, 5rem) 0;
+    padding: clamp(3.5rem, 8vw, 6rem) 0 clamp(2.5rem, 5vw, 4rem);
   }
 
   .plans__intro {
     max-width: 34rem;
-    margin-bottom: 1.75rem;
+    margin-bottom: 2.5rem;
   }
 
   .plans__intro h2 {
     font-size: clamp(1.7rem, 3.5vw, 2.3rem);
-    margin-top: 0.45rem;
+    margin-top: 0.6rem;
   }
 
   .plans__grid {
     display: grid;
-    gap: 1rem;
+    gap: 1.5rem;
     align-items: stretch;
   }
 
   .plan {
-    padding: 1.35rem;
+    padding: 2rem 1.85rem;
     display: flex;
     flex-direction: column;
     height: 100%;
+    gap: 0;
   }
 
   .plan h3 {
     font-family: var(--font-body);
     font-size: 1.2rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .plan__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .plan__head h3 {
+    margin-bottom: 0;
+  }
+
+  .plan__head .badge {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    padding: 0.2rem 0.55rem;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 520px) {
+    .plan__head .badge {
+      flex-basis: 100%;
+      margin-left: 0;
+      font-size: 0.75rem;
+      padding: 0.28rem 0.65rem;
+      white-space: normal;
+    }
   }
 
   .plan__price {
     font-family: var(--font-display);
     font-size: 2.3rem;
     letter-spacing: -0.04em;
-    margin: 0.45rem 0 1rem;
+    margin: 0 0 1.5rem;
   }
 
   .plan__price span {
@@ -563,15 +844,16 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 
   .plan ul {
     display: grid;
-    gap: 0.45rem;
-    margin-bottom: 0;
+    gap: 0.75rem;
+    margin: 0;
+    flex: 1;
     color: var(--ink-soft);
     font-weight: 500;
   }
 
   .plan .btn {
-    margin-top: auto;
-    padding-top: 1.25rem;
+    margin-top: 2rem;
+    flex-shrink: 0;
   }
 
   .plan--featured {
@@ -579,18 +861,15 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
     box-shadow: 0 0 0 1px rgba(12, 143, 124, 0.12), var(--shadow-md);
   }
 
-  .plan--featured .badge {
-    margin-bottom: 0.75rem;
-  }
-
   .close {
-    padding: 0 0 2rem;
+    padding: 0 0 3rem;
+    margin-top: 2.5rem;
   }
 
   .close__panel {
     display: grid;
-    gap: 1.25rem;
-    padding: 1.75rem;
+    gap: 1.5rem;
+    padding: 2rem 1.85rem;
     background:
       radial-gradient(600px 240px at 100% 0%, rgba(12, 143, 124, 0.16), transparent 60%),
       var(--elevated);
@@ -625,12 +904,13 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
 
     .plans__grid {
       grid-template-columns: repeat(3, 1fr);
+      gap: 2rem;
     }
 
     .close__panel {
       grid-template-columns: 1.4fr auto;
       align-items: center;
-      padding: 2.1rem;
+      padding: 2.35rem 2.5rem;
     }
   }
 </style>

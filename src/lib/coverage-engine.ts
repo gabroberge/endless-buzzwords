@@ -49,7 +49,7 @@ export function buildCoverage(seed = Date.now(), withEgg = false): CoverageMap {
 
   return {
     id: `cov_${Date.now().toString(36)}`,
-    title: "Public topic coverage",
+    title: "Topic runway map",
     audience: pick(rng, coverageAudiences),
     clusters,
     breadth: Math.min(98, Math.round(55 + topicCount * 1.8 + rng() * 8)),
