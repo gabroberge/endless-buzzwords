@@ -34,6 +34,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import type { Draft } from "../../lib/content-engine";
+  import {
+    findContent,
+    getDraftItems,
+    getPublishedPipelineItems,
+    queueContent,
+  } from "../../lib/content-lifecycle";
   import { computeOpsMetrics } from "../../lib/metrics";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { formatDate, showToast } from "../../lib/ui";
@@ -51,7 +57,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   function findDraft(ws: ReturnType<typeof loadWorkspace>, draftId: string): Draft | undefined {
-    return ws.drafts.find((d) => d.id === draftId) ?? ws.published.find((d) => d.id === draftId);
+    return findContent(ws, draftId);
   }
 
   function tierOf(d: Draft): number {
@@ -135,20 +141,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   function queueDraft(draft: Draft) {
-    updateWorkspace((s) => ({
-      ...s,
-      pipeline: [
-        {
-          id: `p_${Date.now()}`,
-          draftId: draft.id,
-          title: draft.title,
-          channelId: draft.channelHint === "x" ? "x" : draft.channelHint === "youtube" ? "youtube" : "linkedin",
-          when: new Date(Date.now() + 86400000).toISOString(),
-          status: "scheduled" as const,
-        },
-        ...s.pipeline,
-      ],
-    }));
+    updateWorkspace((s) => queueContent(s, draft));
     showToast("Queued");
     window.dispatchEvent(new Event("eb:workspace"));
     render();
@@ -157,25 +150,24 @@ import AppLayout from "../../layouts/AppLayout.astro";
   function render() {
     const ws = loadWorkspace();
     const metrics = computeOpsMetrics(ws);
-    const publishedItems = ws.pipeline
-      .filter((p) => p.status === "published")
-      .sort((a, b) => +new Date(b.when) - +new Date(a.when));
+    const draftItems = getDraftItems(ws);
+    const publishedItems = getPublishedPipelineItems(ws);
 
     const summary = document.getElementById("summary");
     if (summary) {
-      summary.textContent = `${ws.drafts.length} drafts · ${publishedItems.length} published · Original thoughts: ${metrics.originalThoughts}`;
+      summary.textContent = `${draftItems.length} drafts · ${publishedItems.length} published · Original thoughts: ${metrics.originalThoughts}`;
     }
 
     const draftCount = document.getElementById("draft-count");
-    if (draftCount) draftCount.textContent = String(ws.drafts.length);
+    if (draftCount) draftCount.textContent = String(draftItems.length);
 
     const publishedCount = document.getElementById("published-count");
     if (publishedCount) publishedCount.textContent = String(publishedItems.length);
 
     const drafts = document.getElementById("drafts");
     if (drafts) {
-      drafts.innerHTML = ws.drafts.length
-        ? [...ws.drafts]
+      drafts.innerHTML = draftItems.length
+        ? [...draftItems]
             .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
             .map((d) => draftRow(d))
             .join("")
@@ -197,7 +189,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
     document.querySelectorAll("[data-queue]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = (btn as HTMLElement).dataset.queue;
-        const draft = loadWorkspace().drafts.find((d) => d.id === id);
+        if (!id) return;
+        const draft = findContent(loadWorkspace(), id);
         if (!draft) return;
         queueDraft(draft);
       });

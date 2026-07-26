@@ -1,5 +1,6 @@
 import type { BylineId, VoiceId } from "./data/voice";
 import type { Draft } from "./content-engine";
+import { normalizeWorkspace } from "./content-lifecycle";
 import type { CoverageMap } from "./coverage-engine";
 
 export type ChannelId = "youtube" | "linkedin" | "facebook" | "x";
@@ -82,7 +83,7 @@ function seedPipeline(): PipelineItem[] {
 }
 
 export function createWorkspace(): Workspace {
-  return {
+  return normalizeWorkspace({
     version: 2,
     brandName: "North Desk",
     voiceId: "desk",
@@ -94,7 +95,7 @@ export function createWorkspace(): Workspace {
     published: [],
     pipeline: seedPipeline(),
     coverage: null,
-  };
+  });
 }
 
 export function loadWorkspace(): Workspace {
@@ -111,7 +112,7 @@ export function loadWorkspace(): Workspace {
       localStorage.removeItem("endless-buzzwords.workspace.v1");
       return createWorkspace();
     }
-    return { ...createWorkspace(), ...parsed, channels: parsed.channels?.length ? parsed.channels : defaultChannels };
+    return normalizeWorkspace({ ...createWorkspace(), ...parsed, channels: parsed.channels?.length ? parsed.channels : defaultChannels });
   } catch {
     return createWorkspace();
   }

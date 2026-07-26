@@ -31,6 +31,7 @@ export type Draft = {
   buzzwords: number;
   flags: DraftFlags;
   createdAt: string;
+  lifecycle?: "draft" | "queued" | "published";
 };
 
 export type ComposeOptions = {

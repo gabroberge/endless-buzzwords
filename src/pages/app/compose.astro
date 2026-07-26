@@ -144,6 +144,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   } from "../../lib/content-engine";
   import { topics } from "../../lib/data/topics";
   import { voiceProfiles } from "../../lib/data/voice";
+  import { queueContent, saveToLibrary } from "../../lib/content-lifecycle";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { showToast } from "../../lib/ui";
 
@@ -356,33 +357,19 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   function saveDraft() {
     if (!current) return;
-    updateWorkspace((s) => ({
-      ...s,
-      drafts: [current!, ...s.drafts.filter((d) => d.id !== current!.id)].slice(0, 50),
-    }));
+    updateWorkspace((s) => saveToLibrary(s, current!));
     showToast("Saved to library");
     window.dispatchEvent(new Event("eb:workspace"));
   }
 
   function queueDraft() {
     if (!current) return;
-    const channelId =
-      current.channelHint === "x" ? "x" : current.channelHint === "youtube" ? "youtube" : "linkedin";
-    updateWorkspace((s) => ({
-      ...s,
-      drafts: [current!, ...s.drafts.filter((d) => d.id !== current!.id)].slice(0, 50),
-      pipeline: [
-        {
-          id: `p_${Date.now()}`,
-          draftId: current!.id,
-          title: current!.title,
-          channelId,
-          when: new Date(Date.now() + 86400000 * 2).toISOString(),
-          status: "scheduled" as const,
-        },
-        ...s.pipeline,
-      ],
-    }));
+    updateWorkspace((s) =>
+      queueContent(s, current!, {
+        when: new Date(Date.now() + 86400000 * 2).toISOString(),
+        status: "scheduled",
+      }),
+    );
     showToast("Queued to pipeline");
     window.dispatchEvent(new Event("eb:workspace"));
   }

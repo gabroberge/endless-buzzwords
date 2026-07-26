@@ -37,6 +37,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 </AppLayout>
 
 <script>
+  import { getDraftItems, getQueuedPipelineItems, publishNextPipelineItem } from "../../lib/content-lifecycle";
   import { computeOpsMetrics } from "../../lib/metrics";
   import { authorityLabel } from "../../lib/transforms";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
@@ -71,9 +72,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
     const upcoming = document.getElementById("upcoming");
     if (upcoming) {
-      const items = [...ws.pipeline]
-        .filter((p) => p.status !== "published")
-        .sort((a, b) => +new Date(a.when) - +new Date(b.when));
+      const items = getQueuedPipelineItems(ws);
       upcoming.innerHTML = items.length
         ? items
             .map(
@@ -91,8 +90,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
     const ready = document.getElementById("ready");
     if (ready) {
-      ready.innerHTML = ws.drafts.length
-        ? ws.drafts
+      const draftItems = getDraftItems(ws);
+      ready.innerHTML = draftItems.length
+        ? draftItems
             .slice(0, 5)
             .map(
               (d) => `
@@ -109,14 +109,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   document.getElementById("advance")?.addEventListener("click", () => {
-    updateWorkspace((s) => {
-      const next = [...s.pipeline].sort((a, b) => +new Date(a.when) - +new Date(b.when)).find((p) => p.status !== "published");
-      if (!next) return s;
-      return {
-        ...s,
-        pipeline: s.pipeline.map((p) => (p.id === next.id ? { ...p, status: "published" as const } : p)),
-      };
-    });
+    updateWorkspace((s) => publishNextPipelineItem(s));
     showToast("Marked as published");
     render();
     window.dispatchEvent(new Event("eb:workspace"));

@@ -1,6 +1,7 @@
 import type { Workspace } from "./storage";
 import { bylineModes } from "./data/voice";
 import { authorityLabel } from "./transforms";
+import { getDraftItems } from "./content-lifecycle";
 
 export type OpsMetrics = {
   cadenceTarget: number;
@@ -34,7 +35,8 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
   const farthest = upcoming[0] ?? Date.now();
   const scheduledAheadDays = Math.max(0, Math.round((farthest - Date.now()) / 86400000));
 
-  const pool = [...ws.drafts, ...ws.published];
+  const pool = ws.drafts;
+  const draftItems = getDraftItems(ws);
   const onMessageAvg = pool.length
     ? Math.round(pool.reduce((s, d) => s + d.onMessage, 0) / pool.length)
     : 82;
@@ -59,7 +61,7 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
     onMessageAvg,
     signalAvg,
     activeChannels: ws.channels.filter((c) => c.connected).length,
-    draftsReady: ws.drafts.length,
+    draftsReady: draftItems.length,
     bylineLabel: byline?.label ?? "Brand account",
     contentRunway: scheduledAheadDays >= 14 ? "Unlimited" : `${scheduledAheadDays} days`,
     authorityLevel: authorityLabel(Math.round(seniorityAvg)),
