@@ -43,15 +43,54 @@ import AppLayout from "../../layouts/AppLayout.astro";
       </div>
 
       <div class="controls__section controls__section--actions" id="persist-section">
-        <div class="persist-actions">
-          <button class="btn btn-primary btn-sm" type="button" id="save">Save to library</button>
-          <button class="btn btn-ghost btn-sm" type="button" id="queue">Queue to pipeline</button>
-          <button class="btn btn-ghost btn-sm" type="button" id="copy">Copy</button>
+        <div class="split-btn" id="persist-split">
+          <button class="btn btn-primary btn-sm split-btn__main" type="button" id="save">Save to library</button>
+          <div class="split-btn__menu">
+            <button
+              class="btn btn-primary btn-sm split-btn__trigger"
+              type="button"
+              id="persist-menu"
+              aria-haspopup="menu"
+              aria-expanded="false"
+              aria-label="More save options"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path
+                  d="M6 9l6 6 6-6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"></path>
+              </svg>
+            </button>
+            <div class="split-btn__dropdown" id="persist-dropdown" role="menu" hidden>
+              <button class="split-btn__option" type="button" role="menuitem" data-persist="save">Save to library</button>
+              <button class="split-btn__option" type="button" role="menuitem" data-persist="queue">Queue to pipeline</button>
+            </div>
+          </div>
         </div>
       </div>
     </aside>
 
     <article class="card canvas canvas--idle" id="canvas" aria-live="polite">
+      <button
+        class="canvas__copy"
+        type="button"
+        id="copy"
+        title="Copy to clipboard"
+        aria-label="Copy to clipboard"
+        hidden
+        disabled
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="8" y="8" width="14" height="14" rx="2" stroke="currentColor" stroke-width="2"></rect>
+          <path
+            d="M4 16V4c0-1.1.9-2 2-2h10"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"></path>
+        </svg>
+      </button>
       <div class="canvas__idle" id="canvas-idle">
         <p class="canvas__idle-title">No draft yet</p>
         <p class="canvas__idle-note muted">Choose topic, format, and voice — then compose.</p>
@@ -103,9 +142,28 @@ import AppLayout from "../../layouts/AppLayout.astro";
   const buzzwordsEl = document.getElementById("buzzwords")!;
   const engagementEl = document.getElementById("engagement")!;
   const voiceBadge = document.getElementById("voice-badge")!;
+  const copyBtn = document.getElementById("copy") as HTMLButtonElement;
+  const persistMenuBtn = document.getElementById("persist-menu") as HTMLButtonElement;
+  const persistDropdown = document.getElementById("persist-dropdown")!;
+  const persistSplit = document.getElementById("persist-split")!;
 
   let current: Draft | null = null;
   let composeReady = false;
+
+  function closePersistMenu() {
+    persistDropdown.hidden = true;
+    persistMenuBtn.setAttribute("aria-expanded", "false");
+  }
+
+  function openPersistMenu() {
+    persistDropdown.hidden = false;
+    persistMenuBtn.setAttribute("aria-expanded", "true");
+  }
+
+  function togglePersistMenu() {
+    if (persistDropdown.hidden) openPersistMenu();
+    else closePersistMenu();
+  }
 
   function availableTopics(focusTopicIds: string[]) {
     return focusTopicIds
@@ -120,8 +178,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
     };
 
     toggle("save", enabled);
-    toggle("queue", enabled);
-    toggle("copy", enabled);
+    toggle("persist-menu", enabled);
+    copyBtn.disabled = !enabled;
+    copyBtn.hidden = !enabled;
 
     document.querySelectorAll("[data-action]").forEach((btn) => {
       (btn as HTMLButtonElement).disabled = !enabled;
@@ -265,7 +324,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     });
   });
 
-  document.getElementById("save")?.addEventListener("click", () => {
+  function saveDraft() {
     if (!current) return;
     updateWorkspace((s) => ({
       ...s,
@@ -273,9 +332,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
     }));
     showToast("Saved to library");
     window.dispatchEvent(new Event("eb:workspace"));
-  });
+  }
 
-  document.getElementById("queue")?.addEventListener("click", () => {
+  function queueDraft() {
     if (!current) return;
     const channelId =
       current.channelHint === "x" ? "x" : current.channelHint === "youtube" ? "youtube" : "linkedin";
@@ -296,13 +355,40 @@ import AppLayout from "../../layouts/AppLayout.astro";
     }));
     showToast("Queued to pipeline");
     window.dispatchEvent(new Event("eb:workspace"));
-  });
+  }
 
-  document.getElementById("copy")?.addEventListener("click", async () => {
+  async function copyDraft() {
     if (!current) return;
     await navigator.clipboard.writeText(draftText(current));
     showToast("Copied");
+  }
+
+  document.getElementById("save")?.addEventListener("click", saveDraft);
+
+  persistMenuBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (persistMenuBtn.disabled) return;
+    togglePersistMenu();
   });
+
+  persistDropdown.querySelectorAll("[data-persist]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const action = (btn as HTMLElement).dataset.persist;
+      closePersistMenu();
+      if (action === "save") saveDraft();
+      if (action === "queue") queueDraft();
+    });
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!persistSplit.contains(e.target as Node)) closePersistMenu();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePersistMenu();
+  });
+
+  copyBtn.addEventListener("click", copyDraft);
 
   hydrateTopics();
 
@@ -321,6 +407,45 @@ import AppLayout from "../../layouts/AppLayout.astro";
   .canvas {
     padding: 1.2rem;
     min-width: 0;
+  }
+
+  .canvas {
+    position: relative;
+  }
+
+  .canvas__copy[hidden] {
+    display: none !important;
+  }
+
+  .canvas__copy {
+    position: absolute;
+    top: 0.85rem;
+    right: 0.85rem;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink-muted);
+    transition:
+      color 0.2s var(--ease),
+      border-color 0.2s var(--ease),
+      background 0.2s var(--ease);
+  }
+
+  .canvas__copy:hover:not(:disabled) {
+    color: var(--ink);
+    border-color: var(--line-strong);
+    background: #f8fafc;
+  }
+
+  .canvas__copy:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .controls {
@@ -410,10 +535,71 @@ import AppLayout from "../../layouts/AppLayout.astro";
     cursor: not-allowed;
   }
 
-  .persist-actions {
+  .split-btn {
     display: flex;
-    flex-wrap: wrap;
-    gap: 0.45rem;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .split-btn__main {
+    flex: 1;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    min-height: 38px;
+  }
+
+  .split-btn__menu {
+    position: relative;
+    flex: 0 0 auto;
+  }
+
+  .split-btn__trigger {
+    min-height: 38px;
+    min-width: 38px;
+    padding-inline: 0.55rem;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 1px solid rgba(255, 255, 255, 0.22);
+  }
+
+  .split-btn__trigger svg {
+    display: block;
+  }
+
+  .split-btn__dropdown {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.35rem);
+    z-index: 5;
+    min-width: 11.5rem;
+    padding: 0.3rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .split-btn__dropdown[hidden] {
+    display: none !important;
+  }
+
+  .split-btn__option {
+    display: block;
+    width: 100%;
+    padding: 0.55rem 0.7rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    font-size: 0.84rem;
+    font-weight: 650;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s var(--ease);
+  }
+
+  .split-btn__option:hover {
+    background: #f8fafc;
   }
 
   .transform-grid {
@@ -477,6 +663,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   .canvas__content {
     display: grid;
     gap: 0;
+    padding-right: 1.75rem;
   }
 
   .canvas__meta {
