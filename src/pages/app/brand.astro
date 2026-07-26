@@ -106,7 +106,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
       voiceId: voiceEl.value as any,
       bylineId: byline as any,
       cadenceTarget: Math.min(21, Math.max(1, Number(cadenceEl.value) || s.cadenceTarget)),
-      focusTopics: focusTopics.length ? focusTopics : s.focusTopics,
+      focusTopics,
     }));
     showToast("Brand settings saved");
     window.dispatchEvent(new Event("eb:workspace"));

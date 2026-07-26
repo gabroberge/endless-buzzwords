@@ -5,10 +5,15 @@ import AppLayout from "../../layouts/AppLayout.astro";
 <AppLayout title="Compose" eyebrow="Create">
   <section class="compose">
     <aside class="card controls">
-      <label>
+      <label id="topic-field">
         Topic
         <select id="topic"></select>
       </label>
+      <div id="topic-empty" class="topic-empty" hidden>
+        <p class="topic-empty__title">No focus topics configured</p>
+        <p class="topic-empty__note muted">Add topics to your brand before composing technical authority.</p>
+        <a class="btn btn-accent btn-sm" href="/app/brand">Configure brand</a>
+      </div>
       <label>
         Format
         <select id="format"></select>
@@ -66,14 +71,16 @@ import AppLayout from "../../layouts/AppLayout.astro";
     draftText,
     formats,
     getTransformControlState,
-    topics,
     type Draft,
     type TransformAction,
   } from "../../lib/content-engine";
+  import { topics } from "../../lib/data/topics";
   import { voiceProfiles } from "../../lib/data/voice";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { showToast } from "../../lib/ui";
 
+  const topicFieldEl = document.getElementById("topic-field")!;
+  const topicEmptyEl = document.getElementById("topic-empty")!;
   const topicEl = document.getElementById("topic") as HTMLSelectElement;
   const formatEl = document.getElementById("format") as HTMLSelectElement;
   const voiceEl = document.getElementById("voice") as HTMLSelectElement;
@@ -86,11 +93,76 @@ import AppLayout from "../../layouts/AppLayout.astro";
   const voiceBadge = document.getElementById("voice-badge")!;
 
   let current: Draft | null = null;
-  const ws = loadWorkspace();
+  let composeReady = false;
 
-  topicEl.innerHTML = topics
-    .map((t) => `<option value="${t.id}" ${ws.focusTopics.includes(t.id) ? "selected" : ""}>${t.label}</option>`)
-    .join("");
+  function availableTopics(focusTopicIds: string[]) {
+    return focusTopicIds
+      .map((id) => topics.find((t) => t.id === id))
+      .filter((topic): topic is (typeof topics)[number] => Boolean(topic));
+  }
+
+  function setComposeEnabled(enabled: boolean) {
+    composeReady = enabled;
+    const toggle = (id: string, on: boolean) => {
+      const el = document.getElementById(id) as HTMLButtonElement | null;
+      if (el) el.disabled = !on;
+    };
+
+    toggle("generate", enabled);
+    toggle("again", enabled);
+    toggle("save", enabled);
+    toggle("queue", enabled);
+    toggle("copy", enabled);
+
+    document.querySelectorAll("[data-action]").forEach((btn) => {
+      (btn as HTMLButtonElement).disabled = !enabled;
+    });
+  }
+
+  function showEmptyCanvas() {
+    current = null;
+    titleEl.textContent = "No focus topics configured";
+    bodyEl.textContent = "Add topics to your brand before composing technical authority.";
+    channelEl.textContent = "—";
+    authorityEl.textContent = "Authority —";
+    buzzwordsEl.textContent = "Buzzwords —";
+    engagementEl.textContent = "Engagement —";
+    voiceBadge.textContent = "Voice";
+    document.querySelectorAll("[data-action]").forEach((btn) => {
+      const button = btn as HTMLButtonElement;
+      button.disabled = true;
+      button.title = "";
+    });
+  }
+
+  function hydrateTopics() {
+    const ws = loadWorkspace();
+    const available = availableTopics(ws.focusTopics);
+    const previous = topicEl.value;
+
+    if (!available.length) {
+      topicFieldEl.hidden = true;
+      topicEmptyEl.hidden = false;
+      topicEl.innerHTML = "";
+      setComposeEnabled(false);
+      showEmptyCanvas();
+      return;
+    }
+
+    topicFieldEl.hidden = false;
+    topicEmptyEl.hidden = true;
+    topicEl.innerHTML = available.map((t) => `<option value="${t.id}">${t.label}</option>`).join("");
+
+    const selectedId = available.some((t) => t.id === previous) ? previous : available[0]!.id;
+    topicEl.value = selectedId;
+    setComposeEnabled(true);
+
+    if (current && !available.some((t) => t.id === current!.topicId)) {
+      current = null;
+    }
+  }
+
+  const ws = loadWorkspace();
   formatEl.innerHTML = formats.map((f) => `<option value="${f.id}">${f.label}</option>`).join("");
   voiceEl.innerHTML = voiceProfiles
     .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label}</option>`)
@@ -126,6 +198,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   function create() {
+    if (!composeReady || !topicEl.value) return;
     render(
       composeDraft({
         topicId: topicEl.value,
@@ -200,7 +273,10 @@ import AppLayout from "../../layouts/AppLayout.astro";
     showToast("Copied");
   });
 
-  create();
+  hydrateTopics();
+  if (composeReady) create();
+
+  window.addEventListener("eb:workspace", hydrateTopics);
 </script>
 
 <style>
@@ -230,12 +306,52 @@ import AppLayout from "../../layouts/AppLayout.astro";
     color: var(--ink-muted);
   }
 
+  #topic-field[hidden] {
+    display: none !important;
+  }
+
+  .topic-empty[hidden] {
+    display: none !important;
+  }
+
+  .topic-empty:not([hidden]) {
+    display: grid;
+    gap: 0.55rem;
+    padding: 0.85rem 0.9rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #f8fafc;
+  }
+
   select {
     min-height: 44px;
     border-radius: 10px;
     border: 1px solid var(--line-strong);
     background: #fff;
     padding: 0.5rem 0.75rem;
+  }
+
+  .topic-empty__title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 750;
+    color: var(--ink);
+  }
+
+  .topic-empty__note {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+
+  .topic-empty .btn {
+    justify-self: start;
+    margin-top: 0.15rem;
+  }
+
+  .controls :is(button, select):disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
   }
 
   .btn-stack,
