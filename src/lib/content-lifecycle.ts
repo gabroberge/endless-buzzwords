@@ -114,6 +114,28 @@ export function getPublishedPipelineItems(ws: Workspace): PipelineItem[] {
     .sort((a, b) => +new Date(b.when) - +new Date(a.when));
 }
 
+export function hasPublishedHistory(ws: Workspace, contentId: string): boolean {
+  return ws.pipeline.some((p) => p.draftId === contentId && p.status === "published");
+}
+
+export function getLibraryItems(ws: Workspace): Draft[] {
+  return [...ws.drafts].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+}
+
+export function libraryStatusOf(ws: Workspace, draft: Draft): "draft" | "published" {
+  return hasPublishedHistory(ws, draft.id) ? "published" : "draft";
+}
+
+export function libraryCounts(ws: Workspace) {
+  const items = getLibraryItems(ws);
+  const published = items.filter((item) => libraryStatusOf(ws, item) === "published").length;
+  return {
+    total: items.length,
+    drafts: items.length - published,
+    published,
+  };
+}
+
 function upsertContent(drafts: Draft[], draft: Draft): Draft[] {
   return [draft, ...drafts.filter((d) => d.id !== draft.id)].slice(0, 50);
 }

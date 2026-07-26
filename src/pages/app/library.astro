@@ -6,68 +6,79 @@ import AppLayout from "../../layouts/AppLayout.astro";
   <section class="library-page">
     <div class="card intro">
       <div class="intro__copy">
-        <h2>Drafts and published pieces</h2>
-        <p class="muted">Your content library — saved locally. Re-queue anything when you need to fill a slot.</p>
+        <h2>Your content library</h2>
+        <p class="muted">Everything you've created, ready to find, reuse, or put back to work.</p>
       </div>
       <p class="intro__summary" id="summary" aria-live="polite"></p>
     </div>
 
-    <div class="library-grid">
-      <section class="panel">
-        <header class="panel__head">
-          <h3>Drafts</h3>
-          <span class="panel__count" id="draft-count"></span>
-        </header>
-        <ul id="drafts" class="lib-list" aria-label="Drafts"></ul>
-      </section>
+    <section class="panel library-panel" id="library-panel" hidden>
+      <div class="library-toolbar">
+        <label class="library-search">
+          <span class="sr-only">Search library</span>
+          <input id="search" type="search" placeholder="Search titles and topics" autocomplete="off" />
+        </label>
+        <div class="library-filters" role="tablist" aria-label="Filter by status">
+          <button class="library-filter is-active" type="button" data-status="all" role="tab" aria-selected="true">All</button>
+          <button class="library-filter" type="button" data-status="draft" role="tab" aria-selected="false">Drafts</button>
+          <button class="library-filter" type="button" data-status="published" role="tab" aria-selected="false">Published</button>
+        </div>
+        <label class="library-topic">
+          <span class="sr-only">Filter by topic</span>
+          <select id="topic-filter">
+            <option value="all">All topics</option>
+          </select>
+        </label>
+      </div>
+      <ul id="library-list" class="lib-list" aria-label="Content library"></ul>
+      <p class="library-no-matches muted" id="no-matches" hidden>No pieces match your filters.</p>
+    </section>
 
-      <section class="panel">
-        <header class="panel__head">
-          <h3>Recently published</h3>
-          <span class="panel__count" id="published-count"></span>
-        </header>
-        <ul id="published" class="lib-list" aria-label="Recently published"></ul>
-      </section>
+    <div class="card library-empty" id="library-empty" hidden>
+      <p class="library-empty__title">Your library is empty</p>
+      <p class="library-empty__note muted">
+        Compose your first piece and save it here. Everything you create will stay available to reuse later.
+      </p>
+      <a class="btn btn-accent btn-sm" href="/app/compose">Compose something</a>
     </div>
   </section>
 </AppLayout>
 
 <script>
   import type { Draft } from "../../lib/content-engine";
+  import { formats } from "../../lib/data/formats";
+  import { topicById } from "../../lib/data/topics";
+  import { voiceProfiles } from "../../lib/data/voice";
   import {
     findContent,
-    getDraftItems,
-    getPublishedPipelineItems,
+    getLibraryItems,
     hasActiveQueueEntry,
+    libraryCounts,
+    libraryStatusOf,
     queueContent,
   } from "../../lib/content-lifecycle";
-  import { computeOpsMetrics } from "../../lib/metrics";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { formatDate, showToast } from "../../lib/ui";
-  import { authorityLabel } from "../../lib/transforms";
 
   const channelLabels: Record<string, string> = {
     linkedin: "LinkedIn",
     x: "X",
     youtube: "YouTube",
     facebook: "Facebook",
+    newsletter: "Newsletter",
   };
 
-  function formatLabel(id: string): string {
-    return id.replaceAll("-", " ");
-  }
+  const formatById = Object.fromEntries(formats.map((f) => [f.id, f.label]));
+  const voiceById = Object.fromEntries(voiceProfiles.map((v) => [v.id, v.label]));
 
-  function findDraft(ws: ReturnType<typeof loadWorkspace>, draftId: string): Draft | undefined {
-    return findContent(ws, draftId);
-  }
+  const searchEl = document.getElementById("search") as HTMLInputElement;
+  const topicFilterEl = document.getElementById("topic-filter") as HTMLSelectElement;
+  const libraryPanel = document.getElementById("library-panel")!;
+  const libraryEmpty = document.getElementById("library-empty")!;
+  const libraryList = document.getElementById("library-list")!;
+  const noMatchesEl = document.getElementById("no-matches")!;
 
-  function tierOf(d: Draft): number {
-    return d.authorityTier ?? Math.max(0, (d.seniority ?? 2) - 2);
-  }
-
-  function buzzOf(d: Draft): number {
-    return d.buzzwordCount ?? d.buzzwords ?? 0;
-  }
+  let statusFilter: "all" | "draft" | "published" = "all";
 
   function metaParts(parts: string[]): string {
     return parts
@@ -76,73 +87,41 @@ import AppLayout from "../../layouts/AppLayout.astro";
       .join('<span class="lib-row__sep" aria-hidden="true">·</span>');
   }
 
-  function draftRow(d: Draft): string {
-    const meta = metaParts([
-      formatDate(d.createdAt),
-      formatLabel(d.formatId),
-      authorityLabel(tierOf(d)),
-      buzzOf(d) > 0 ? `${buzzOf(d)} buzzwords` : "",
-    ]);
+  function rowAction(ws: ReturnType<typeof loadWorkspace>, draft: Draft): string {
+    if (hasActiveQueueEntry(ws, draft.id)) {
+      return `<div class="lib-row__action"><span class="lib-row__status">Queued</span></div>`;
+    }
+
+    const published = libraryStatusOf(ws, draft) === "published";
+    const label = published ? "Re-queue" : "Queue";
+    return `<div class="lib-row__action">
+      <button class="btn btn-ghost btn-sm" type="button" data-queue="${draft.id}">${label}</button>
+    </div>`;
+  }
+
+  function contentRow(ws: ReturnType<typeof loadWorkspace>, draft: Draft): string {
+    const status = libraryStatusOf(ws, draft);
+    const topic = topicById[draft.topicId]?.label ?? draft.topicId;
+    const format = formatById[draft.formatId] ?? draft.formatId.replaceAll("-", " ");
+    const voice = voiceById[draft.voiceId] ?? draft.voiceId;
+    const channel = channelLabels[draft.channelHint] ?? draft.channelHint;
+
+    const meta = metaParts([topic, format, channel, voice, formatDate(draft.createdAt)]);
 
     return `
       <li class="lib-row">
         <div class="lib-row__main">
           <div class="lib-row__head">
-            <span class="lib-row__badge lib-row__badge--draft">Draft</span>
-            <h4 class="lib-row__title">${d.title}</h4>
+            <span class="lib-row__badge lib-row__badge--${status}">${status === "published" ? "Published" : "Draft"}</span>
+            <h4 class="lib-row__title">${draft.title}</h4>
           </div>
           <p class="lib-row__meta">${meta}</p>
         </div>
-        <div class="lib-row__action">
-          <button class="btn btn-ghost btn-sm" type="button" data-queue="${d.id}">Queue</button>
-        </div>
+        ${rowAction(ws, draft)}
       </li>`;
   }
 
-  function publishedRow(
-    title: string,
-    when: string,
-    channelId: string,
-    draft: Draft | undefined,
-    queued: boolean,
-  ): string {
-    const meta = metaParts([
-      formatDate(when),
-      channelLabels[channelId] ?? channelId,
-      draft ? authorityLabel(tierOf(draft)) : "",
-      draft && buzzOf(draft) > 0 ? `${buzzOf(draft)} buzzwords` : "",
-    ]);
-
-    const action = queued
-      ? `<div class="lib-row__action"><span class="lib-row__status">Queued</span></div>`
-      : draft
-        ? `<div class="lib-row__action">
-          <button class="btn btn-ghost btn-sm" type="button" data-rqueue="${draft.id}">Re-queue</button>
-        </div>`
-        : "";
-
-    return `
-      <li class="lib-row">
-        <div class="lib-row__main">
-          <div class="lib-row__head">
-            <span class="lib-row__badge lib-row__badge--published">Published</span>
-            <h4 class="lib-row__title">${title}</h4>
-          </div>
-          <p class="lib-row__meta">${meta}</p>
-        </div>
-        ${action}
-      </li>`;
-  }
-
-  function emptyRow(title: string, note: string): string {
-    return `
-      <li class="lib-empty">
-        <p class="lib-empty__title">${title}</p>
-        <p class="lib-empty__note muted">${note}</p>
-      </li>`;
-  }
-
-  function queueDraft(draft: Draft) {
+  function queueItem(draft: Draft) {
     const ws = loadWorkspace();
     if (hasActiveQueueEntry(ws, draft.id)) return;
     updateWorkspace((s) => queueContent(s, draft));
@@ -151,66 +130,96 @@ import AppLayout from "../../layouts/AppLayout.astro";
     render();
   }
 
+  function hydrateTopicFilter(items: Draft[]) {
+    const current = topicFilterEl.value;
+    const topicIds = [...new Set(items.map((item) => item.topicId))].sort((a, b) => {
+      const aLabel = topicById[a]?.label ?? a;
+      const bLabel = topicById[b]?.label ?? b;
+      return aLabel.localeCompare(bLabel);
+    });
+
+    topicFilterEl.innerHTML =
+      `<option value="all">All topics</option>` +
+      topicIds
+        .map((id) => `<option value="${id}">${topicById[id]?.label ?? id}</option>`)
+        .join("");
+
+    if ([...topicFilterEl.options].some((opt) => opt.value === current)) {
+      topicFilterEl.value = current;
+    }
+  }
+
+  function filteredItems(ws: ReturnType<typeof loadWorkspace>, items: Draft[]): Draft[] {
+    const query = searchEl.value.trim().toLowerCase();
+    const topic = topicFilterEl.value;
+
+    return items.filter((item) => {
+      const status = libraryStatusOf(ws, item);
+      if (statusFilter === "draft" && status !== "draft") return false;
+      if (statusFilter === "published" && status !== "published") return false;
+      if (topic !== "all" && item.topicId !== topic) return false;
+
+      if (!query) return true;
+      const topicLabel = topicById[item.topicId]?.label ?? item.topicId;
+      const format = formatById[item.formatId] ?? item.formatId;
+      const haystack = `${item.title} ${topicLabel} ${format}`.toLowerCase();
+      return haystack.includes(query);
+    });
+  }
+
+  function setStatusFilter(next: "all" | "draft" | "published") {
+    statusFilter = next;
+    document.querySelectorAll(".library-filter").forEach((btn) => {
+      const active = (btn as HTMLElement).dataset.status === next;
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-selected", String(active));
+    });
+    render();
+  }
+
   function render() {
     const ws = loadWorkspace();
-    const metrics = computeOpsMetrics(ws);
-    const draftItems = getDraftItems(ws);
-    const publishedItems = getPublishedPipelineItems(ws);
+    const items = getLibraryItems(ws);
+    const counts = libraryCounts(ws);
 
     const summary = document.getElementById("summary");
     if (summary) {
-      summary.textContent = `${draftItems.length} drafts · ${publishedItems.length} published · Original thoughts: ${metrics.originalThoughts}`;
+      summary.textContent = `${counts.total} pieces · ${counts.drafts} drafts · ${counts.published} published`;
     }
 
-    const draftCount = document.getElementById("draft-count");
-    if (draftCount) draftCount.textContent = String(draftItems.length);
+    const hasContent = items.length > 0;
+    libraryPanel.hidden = !hasContent;
+    libraryEmpty.hidden = hasContent;
 
-    const publishedCount = document.getElementById("published-count");
-    if (publishedCount) publishedCount.textContent = String(publishedItems.length);
+    if (!hasContent) return;
 
-    const drafts = document.getElementById("drafts");
-    if (drafts) {
-      drafts.innerHTML = draftItems.length
-        ? [...draftItems]
-            .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
-            .map((d) => draftRow(d))
-            .join("")
-        : emptyRow("Empty", "Compose to build your library.");
-    }
+    hydrateTopicFilter(items);
+    const visible = filteredItems(ws, items);
 
-    const published = document.getElementById("published");
-    if (published) {
-      published.innerHTML = publishedItems.length
-        ? publishedItems
-            .map((p) => {
-              const draft = findDraft(ws, p.draftId);
-              const queued = hasActiveQueueEntry(ws, p.draftId);
-              return publishedRow(p.title, p.when, p.channelId, draft, queued);
-            })
-            .join("")
-        : emptyRow("Nothing published yet", "Advance items from Pipeline.");
-    }
-
-    document.querySelectorAll("[data-queue]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = (btn as HTMLElement).dataset.queue;
-        if (!id) return;
-        const draft = findContent(loadWorkspace(), id);
-        if (!draft) return;
-        queueDraft(draft);
-      });
-    });
-
-    document.querySelectorAll("[data-rqueue]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = (btn as HTMLElement).dataset.rqueue;
-        const wsNow = loadWorkspace();
-        const draft = findDraft(wsNow, id!);
-        if (!draft) return;
-        queueDraft(draft);
-      });
-    });
+    libraryList.innerHTML = visible.map((item) => contentRow(ws, item)).join("");
+    noMatchesEl.hidden = visible.length > 0;
+    libraryList.hidden = visible.length === 0;
   }
+
+  searchEl.addEventListener("input", render);
+  topicFilterEl.addEventListener("change", render);
+
+  document.querySelectorAll(".library-filter").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const status = (btn as HTMLElement).dataset.status as "all" | "draft" | "published";
+      setStatusFilter(status);
+    });
+  });
+
+  libraryList.addEventListener("click", (e) => {
+    const btn = (e.target as HTMLElement).closest("[data-queue]") as HTMLElement | null;
+    if (!btn) return;
+    const id = btn.dataset.queue;
+    if (!id) return;
+    const draft = findContent(loadWorkspace(), id);
+    if (!draft) return;
+    queueItem(draft);
+  });
 
   render();
   window.addEventListener("eb:workspace", render);
@@ -249,10 +258,11 @@ import AppLayout from "../../layouts/AppLayout.astro";
     letter-spacing: 0.01em;
   }
 
-  .library-grid {
-    display: grid;
-    gap: 1rem;
-    align-items: start;
+  .library-panel[hidden],
+  .library-empty[hidden],
+  .library-no-matches[hidden],
+  .lib-list[hidden] {
+    display: none !important;
   }
 
   .panel {
@@ -261,32 +271,86 @@ import AppLayout from "../../layouts/AppLayout.astro";
     background: var(--elevated);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
-    align-self: start;
   }
 
-  .panel__head {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.7rem 1rem;
+  .library-toolbar {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.85rem 1rem;
     border-bottom: 1px solid var(--line);
     background: #f8fafc;
   }
 
-  .panel__head h3 {
-    font-family: var(--font-body);
-    font-size: 0.92rem;
-    font-weight: 750;
-    margin: 0;
-    line-height: 1.2;
+  .library-search input,
+  .library-topic select {
+    width: 100%;
+    min-height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    padding: 0.5rem 0.75rem;
+    font-weight: 550;
   }
 
-  .panel__count {
-    font-size: 0.76rem;
-    font-weight: 700;
+  .library-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+  }
+
+  .library-filter {
+    padding: 0.35rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: #fff;
+    font-size: 0.78rem;
+    font-weight: 650;
     color: var(--ink-muted);
-    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition:
+      background 0.15s var(--ease),
+      border-color 0.15s var(--ease),
+      color 0.15s var(--ease);
+  }
+
+  .library-filter:hover {
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+
+  .library-filter.is-active {
+    border-color: rgba(12, 143, 124, 0.35);
+    background: rgba(12, 143, 124, 0.08);
+    color: var(--accent-hover);
+  }
+
+  .library-no-matches {
+    margin: 0;
+    padding: 1rem;
+    font-size: 0.84rem;
+    text-align: center;
+  }
+
+  .library-empty {
+    padding: 1.35rem 1.4rem;
+    display: grid;
+    gap: 0.55rem;
+    justify-items: start;
+  }
+
+  .library-empty__title {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 750;
+    color: var(--ink);
+  }
+
+  .library-empty__note {
+    margin: 0;
+    font-size: 0.88rem;
+    line-height: 1.55;
+    max-width: 36rem;
   }
 
   .lib-list {
@@ -295,7 +359,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     padding: 0;
   }
 
-  /* Client-rendered rows */
   .lib-list :global(.lib-row) {
     display: flex;
     align-items: center;
@@ -303,9 +366,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     gap: 0.85rem;
     padding: 0.72rem 1rem;
     border-bottom: 1px solid var(--line);
-    transition:
-      background 0.18s var(--ease),
-      border-color 0.18s var(--ease);
+    transition: background 0.18s var(--ease);
   }
 
   .lib-list :global(.lib-row:last-child) {
@@ -392,28 +453,18 @@ import AppLayout from "../../layouts/AppLayout.astro";
     letter-spacing: 0.01em;
   }
 
-  .lib-list :global(.lib-empty) {
-    padding: 1rem 1rem 1.05rem;
-  }
+  @media (min-width: 720px) {
+    .library-toolbar {
+      grid-template-columns: minmax(0, 1.4fr) auto minmax(10rem, 0.8fr);
+      align-items: center;
+    }
 
-  .lib-list :global(.lib-empty__title) {
-    margin: 0 0 0.2rem;
-    font-size: 0.88rem;
-    font-weight: 700;
-    color: var(--ink);
-  }
-
-  .lib-list :global(.lib-empty__note) {
-    margin: 0;
-    font-size: 0.8rem;
-    line-height: 1.45;
+    .library-filters {
+      justify-content: center;
+    }
   }
 
   @media (min-width: 860px) {
-    .library-grid {
-      grid-template-columns: 1fr 1fr;
-    }
-
     .lib-list :global(.lib-row) {
       padding: 0.68rem 1rem;
     }
