@@ -1,0 +1,88 @@
+---
+---
+
+<footer class="m-footer">
+  <div class="container-wide m-footer__grid">
+    <div>
+      <div class="brand-line">
+        <span class="mark" aria-hidden="true"></span>
+        <strong>Endless Buzzwords™</strong>
+      </div>
+      <p class="muted">Technical presence for brands that publish on a schedule.</p>
+    </div>
+    <div>
+      <h3>Product</h3>
+      <a href="/#product">How it works</a>
+      <a href="/app/compose">Compose</a>
+      <a href="/app">Pipeline</a>
+      <a href="/#plans">Plans</a>
+    </div>
+    <div>
+      <h3>Desk</h3>
+      <a href="/app">Pipeline</a>
+      <a href="/app/coverage">Coverage</a>
+      <a href="/app/channels">Channels</a>
+      <a href="/app/brand">Brand</a>
+    </div>
+    <div>
+      <h3>For</h3>
+      <p class="muted">Educator brands, bootcamps, and developer advocacy teams.</p>
+      <p class="muted tiny">© {new Date().getFullYear()} Endless Buzzwords</p>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .m-footer {
+    margin-top: 4rem;
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.55);
+    padding: 3rem 0 2.5rem;
+  }
+
+  .m-footer__grid {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .brand-line {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .mark {
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, var(--accent), var(--ink));
+  }
+
+  h3 {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    margin-bottom: 0.85rem;
+  }
+
+  a,
+  p {
+    display: block;
+    margin-bottom: 0.45rem;
+    font-size: 0.95rem;
+  }
+
+  .tiny {
+    margin-top: 1rem;
+    font-size: 0.8rem;
+  }
+
+  @media (min-width: 800px) {
+    .m-footer__grid {
+      grid-template-columns: 1.4fr 1fr 1fr 1.2fr;
+    }
+  }
+</style>

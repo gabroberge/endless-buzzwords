@@ -1,0 +1,232 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Pipeline" eyebrow="Operations">
+  <section class="pipe">
+    <div class="metric-grid" id="metrics"></div>
+
+    <div class="pipe-grid">
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Upcoming</h2>
+          <button class="btn btn-soft btn-sm" type="button" id="advance">Mark next published</button>
+        </header>
+        <ul class="feed" id="upcoming"></ul>
+      </article>
+
+      <article class="card panel">
+        <header class="panel__head">
+          <h2>Ready to schedule</h2>
+          <a href="/app/compose">Compose</a>
+        </header>
+        <ul class="feed" id="ready"></ul>
+      </article>
+
+      <article class="card panel panel--cta">
+        <p class="eyebrow">Keep the desk moving</p>
+        <h2>Fill next week's slots</h2>
+        <p class="muted">Compose a draft, queue it to a channel, and keep coverage balanced across your topics.</p>
+        <div class="actions">
+          <a class="btn btn-accent" href="/app/compose">Open Compose</a>
+          <a class="btn btn-ghost" href="/app/coverage">Review coverage</a>
+        </div>
+      </article>
+    </div>
+  </section>
+</AppLayout>
+
+<script>
+  import { computeOpsMetrics } from "../../lib/metrics";
+  import { loadWorkspace, updateWorkspace } from "../../lib/storage";
+  import { formatDay, showToast } from "../../lib/ui";
+
+  function render() {
+    const ws = loadWorkspace();
+    const m = computeOpsMetrics(ws);
+
+    const metrics = document.getElementById("metrics");
+    if (metrics) {
+      const cards = [
+        ["Cadence", `${m.publishedThisWeek} / ${m.cadenceTarget} this week`],
+        ["Scheduled ahead", `${m.scheduledAheadDays} days`],
+        ["Coverage breadth", `${m.coverageBreadth}%`],
+        ["On-message", `${m.onMessageAvg}%`],
+        ["Signal strength", `${m.signalAvg}`],
+        ["Active channels", String(m.activeChannels)],
+        ["Drafts ready", String(m.draftsReady)],
+        ["Byline", m.bylineLabel],
+      ];
+      metrics.innerHTML = cards
+        .map(
+          ([label, value]) => `
+        <div class="card metric">
+          <span>${label}</span>
+          <strong>${value}</strong>
+        </div>`,
+        )
+        .join("");
+    }
+
+    const upcoming = document.getElementById("upcoming");
+    if (upcoming) {
+      const items = [...ws.pipeline]
+        .filter((p) => p.status !== "published")
+        .sort((a, b) => +new Date(a.when) - +new Date(b.when));
+      upcoming.innerHTML = items.length
+        ? items
+            .map(
+              (p) => `
+          <li>
+            <div>
+              <strong>${p.title}</strong>
+              <p class="muted">${formatDay(p.when)} · ${p.channelId} · ${p.status}</p>
+            </div>
+          </li>`,
+            )
+            .join("")
+        : `<li><div><strong>Queue clear</strong><p class="muted">Schedule something from Compose or Library.</p></div></li>`;
+    }
+
+    const ready = document.getElementById("ready");
+    if (ready) {
+      ready.innerHTML = ws.drafts.length
+        ? ws.drafts
+            .slice(0, 5)
+            .map(
+              (d) => `
+          <li>
+            <div>
+              <strong>${d.title}</strong>
+              <p class="muted">${d.formatId.replaceAll("-", " ")} · signal ${d.signal}</p>
+            </div>
+          </li>`,
+            )
+            .join("")
+        : `<li><div><strong>No drafts yet</strong><p class="muted">Compose packages topics into channel-ready posts.</p></div></li>`;
+    }
+  }
+
+  document.getElementById("advance")?.addEventListener("click", () => {
+    updateWorkspace((s) => {
+      const next = [...s.pipeline].sort((a, b) => +new Date(a.when) - +new Date(b.when)).find((p) => p.status !== "published");
+      if (!next) return s;
+      return {
+        ...s,
+        pipeline: s.pipeline.map((p) => (p.id === next.id ? { ...p, status: "published" as const } : p)),
+      };
+    });
+    showToast("Marked as published");
+    render();
+    window.dispatchEvent(new Event("eb:workspace"));
+  });
+
+  render();
+</script>
+
+<style>
+  .metric-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .metric {
+    padding: 1rem 1.05rem;
+  }
+
+  .metric span {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .metric strong {
+    font-family: var(--font-display);
+    font-size: 1.15rem;
+    letter-spacing: -0.03em;
+  }
+
+  .pipe-grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .panel {
+    padding: 1.15rem 1.2rem 1.25rem;
+  }
+
+  .panel__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .panel__head h2 {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 750;
+  }
+
+  .panel__head a {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--accent-hover);
+  }
+
+  .feed {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .feed li {
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .feed li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .feed strong {
+    display: block;
+    font-size: 0.95rem;
+  }
+
+  .feed .muted {
+    font-size: 0.82rem;
+    margin-top: 0.2rem;
+  }
+
+  .panel--cta h2 {
+    margin: 0.35rem 0 0.5rem;
+    font-size: 1.45rem;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+    margin-top: 1.1rem;
+  }
+
+  @media (min-width: 800px) {
+    .metric-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .pipe-grid {
+      grid-template-columns: 1.1fr 1.1fr;
+    }
+
+    .panel--cta {
+      grid-column: 1 / -1;
+    }
+  }
+</style>

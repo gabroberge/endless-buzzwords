@@ -1,0 +1,102 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Channels" eyebrow="Distribution">
+  <section>
+    <div class="card intro">
+      <h2>Connected destinations</h2>
+      <p class="muted">Connections are stored in this browser and used for pipeline routing. Nothing leaves your machine.</p>
+      <p class="status" id="status"></p>
+    </div>
+    <div class="grid" id="channels"></div>
+  </section>
+</AppLayout>
+
+<script>
+  import { loadWorkspace, updateWorkspace, type ChannelId } from "../../lib/storage";
+  import { showToast } from "../../lib/ui";
+
+  function render() {
+    const ws = loadWorkspace();
+    const active = ws.channels.filter((c) => c.connected).length;
+    const status = document.getElementById("status");
+    if (status) status.textContent = `${active} channels ready for scheduling`;
+
+    const grid = document.getElementById("channels");
+    if (!grid) return;
+    grid.innerHTML = ws.channels
+      .map(
+        (c) => `
+      <article class="card channel">
+        <div>
+          <h3>${c.label}</h3>
+          <p class="muted">${c.connected ? "Connected" : "Not connected"}</p>
+        </div>
+        <button class="btn ${c.connected ? "btn-ghost" : "btn-accent"} btn-sm" type="button" data-id="${c.id}">
+          ${c.connected ? "Disconnect" : "Connect"}
+        </button>
+      </article>`,
+      )
+      .join("");
+
+    grid.querySelectorAll("[data-id]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = (btn as HTMLElement).dataset.id as ChannelId;
+        updateWorkspace((s) => ({
+          ...s,
+          channels: s.channels.map((c) => (c.id === id ? { ...c, connected: !c.connected } : c)),
+        }));
+        const next = loadWorkspace().channels.find((c) => c.id === id);
+        showToast(`${next?.label} ${next?.connected ? "connected" : "disconnected"}`);
+        render();
+        window.dispatchEvent(new Event("eb:workspace"));
+      });
+    });
+  }
+
+  render();
+</script>
+
+<style>
+  .intro {
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+  }
+
+  .intro h2 {
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .status {
+    margin-top: 0.85rem;
+    font-weight: 750;
+    color: var(--accent-hover);
+  }
+
+  .grid {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .channel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.15rem;
+  }
+
+  .channel h3 {
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+  }
+
+  @media (min-width: 720px) {
+    .grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

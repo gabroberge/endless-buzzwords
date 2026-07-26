@@ -1,43 +1,36 @@
-# Astro Starter Kit: Minimal
+# Endless Buzzwords™
+
+A fully static satirical SaaS: content operations for technical brands that need continuous public presence.
+
+Built with [Astro](https://astro.build). No backend, no AI APIs — browser-only logic, templates, and localStorage.
+
+## Develop
 
 ```sh
-bun create astro@latest -- --template minimal
+bun install
+bun dev
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+Background mode:
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```sh
+astro dev --background
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+## Build
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+```sh
+bun run build
+bun run check
+bun run preview
+```
 
-Any static assets, like images, can be placed in the `public/` directory.
+## Surfaces
 
-## 🧞 Commands
-
-All commands are run from the root of the project, from a terminal:
-
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `bun install`             | Installs dependencies                            |
-| `bun dev`             | Starts local dev server at `localhost:4321`      |
-| `bun build`           | Build your production site to `./dist/`          |
-| `bun preview`         | Preview your build locally, before deploying     |
-| `bun astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `bun astro -- --help` | Get help using the Astro CLI                     |
-
-## 👀 Want to learn more?
-
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+- `/` — product site
+- `/app` — Pipeline
+- `/app/compose` — Compose
+- `/app/library` — Library
+- `/app/coverage` — Coverage
+- `/app/channels` — Channels
+- `/app/brand` — Brand settings

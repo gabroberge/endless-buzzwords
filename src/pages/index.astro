@@ -1,17 +1,636 @@
 ---
-
+import MarketingLayout from "../layouts/MarketingLayout.astro";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<MarketingLayout
+  title="Endless Buzzwords™ — Technical presence, on a schedule"
+  description="Endless Buzzwords helps educator brands and developer advocacy teams keep a continuous technical presence across social channels."
+>
+  <!-- Cold open: product in motion, brand as hero -->
+  <section class="open">
+    <div class="container-wide open__grid">
+      <div class="open__copy">
+        <p class="eyebrow">Content operations for technical brands</p>
+        <h1 class="open__brand">Endless Buzzwords<span>™</span></h1>
+        <p class="open__lede">
+          Platforms reward continuity. Expertise alone does not publish itself. Endless Buzzwords keeps your technical presence on schedule.
+        </p>
+        <div class="open__cta">
+          <a class="btn btn-primary" href="/app/compose">Open the desk</a>
+          <a class="btn btn-ghost" href="#product">See how packaging works</a>
+        </div>
+      </div>
+
+      <div class="feed-rail" aria-hidden="true">
+        <div class="feed-rail__label">Desk output · live sample</div>
+        <div class="feed-rail__stack" id="feed-stack"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Thesis -->
+  <section class="thesis" id="thesis">
+    <div class="container thesis__inner">
+      <h2>Your audience expects you to show up technically. Every week.</h2>
+      <div class="thesis__cols">
+        <p>
+          Bootcamps, educator brands, and advocacy teams are judged as much by their public cadence as by their curriculum. Gaps in the feed read like gaps in competence.
+        </p>
+        <p>
+          Endless Buzzwords is the desk layer between what your brand knows and what your channels need: formats, voice, coverage, and a pipeline that stays full.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Product narrative -->
+  <section class="product" id="product">
+    <div class="container-wide">
+      <div class="product__intro">
+        <p class="eyebrow">The desk</p>
+        <h2>Four surfaces. One publishing rhythm.</h2>
+      </div>
+
+      <div class="product__block">
+        <div class="product__copy">
+          <h3>Compose</h3>
+          <p>
+            Start from a topic and a format — field note, tradeoff brief, debug prompt, short script. Adjust voice, add a takeaway, or repackage for LinkedIn or X without opening a blank page.
+          </p>
+        </div>
+        <div class="card product__ui" id="compose-preview">
+          <div class="ui-bar"><span></span><span></span><span></span><em>Compose</em></div>
+          <pre id="compose-sample">Loading sample…</pre>
+        </div>
+      </div>
+
+      <div class="product__block product__block--flip">
+        <div class="product__copy">
+          <h3>Pipeline</h3>
+          <p>
+            See what is scheduled, what is queued, and whether this week’s cadence is on track. Advance posts as they go out. Keep the next few days from going quiet.
+          </p>
+        </div>
+        <div class="card product__ui product__ui--light">
+          <ul class="mini-pipe">
+            <li><strong>Tue · LinkedIn</strong><span>Field note · API design</span></li>
+            <li><strong>Thu · X</strong><span>Compressed take · caching</span></li>
+            <li><strong>Fri · YouTube</strong><span>60-second script · queued</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="product__block">
+        <div class="product__copy">
+          <h3>Coverage</h3>
+          <p>
+            Map the topics your brand is prepared to speak on. Spot thin areas before the calendar forces an awkward pivot. Rebalance emphasis when launches shift.
+          </p>
+        </div>
+        <div class="card product__ui product__ui--light">
+          <div class="mini-cover">
+            <div><h4>Services</h4><p>API design · Node.js · Auth</p></div>
+            <div><h4>Architecture</h4><p>Boundaries · Async · Failure modes</p></div>
+            <div><h4>Data</h4><p>Postgres · Caching · Migrations</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="product__block product__block--flip">
+        <div class="product__copy">
+          <h3>Channels & brand</h3>
+          <p>
+            Connect destinations, set a weekly cadence target, choose a default voice, and decide how posts are attributed — brand account, content desk, or named contributor.
+          </p>
+        </div>
+        <div class="card product__ui product__ui--light">
+          <div class="mini-brand">
+            <div><span>Voice</span><strong>Brand desk</strong></div>
+            <div><span>Cadence</span><strong>5 / week</strong></div>
+            <div><span>Byline</span><strong>Brand account</strong></div>
+            <div><span>Channels</span><strong>2 connected</strong></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Who -->
+  <section class="who">
+    <div class="container">
+      <p class="eyebrow">Built for</p>
+      <h2>Teams that teach in public</h2>
+      <ul class="who__list">
+        <li>
+          <strong>Educator brands</strong>
+          <span>Keep social aligned with course launches without a full editorial staff.</span>
+        </li>
+        <li>
+          <strong>Bootcamps</strong>
+          <span>Maintain a technical feed that matches what cohorts are learning.</span>
+        </li>
+        <li>
+          <strong>Advocacy & community</strong>
+          <span>Package platform knowledge into a steady multi-channel rhythm.</span>
+        </li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Plans -->
+  <section class="plans" id="plans">
+    <div class="container">
+      <div class="plans__intro">
+        <p class="eyebrow">Plans</p>
+        <h2>Sized to the desk, not the ego</h2>
+      </div>
+      <div class="plans__grid">
+        <article class="card plan">
+          <h3>Studio</h3>
+          <p class="plan__price">$39<span>/mo</span></p>
+          <ul>
+            <li>Compose + library</li>
+            <li>2 connected channels</li>
+            <li>Weekly cadence tracking</li>
+            <li>1 voice profile</li>
+          </ul>
+          <a class="btn btn-ghost btn-block" href="/app">Start on Studio</a>
+        </article>
+        <article class="card plan plan--featured">
+          <p class="badge">Common for teams</p>
+          <h3>Desk</h3>
+          <p class="plan__price">$99<span>/mo</span></p>
+          <ul>
+            <li>Everything in Studio</li>
+            <li>4 channels</li>
+            <li>Coverage maps</li>
+            <li>Voice profiles + byline modes</li>
+          </ul>
+          <a class="btn btn-primary btn-block" href="/app/compose">Open Desk</a>
+        </article>
+        <article class="card plan">
+          <h3>Organization</h3>
+          <p class="plan__price">$280<span>/mo</span></p>
+          <ul>
+            <li>Multi-brand desks</li>
+            <li>Shared libraries</li>
+            <li>Priority channel slots</li>
+            <li>Workspace export</li>
+          </ul>
+          <a class="btn btn-ghost btn-block" href="/app/brand">Configure brand</a>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- Close -->
+  <section class="close">
+    <div class="container card close__panel">
+      <div>
+        <h2>Keep the feed technical. Keep it moving.</h2>
+        <p class="muted">Open the desk, compose from your topics, and fill the pipeline before next week goes quiet.</p>
+      </div>
+      <a class="btn btn-accent" href="/app/compose">Compose the next post</a>
+    </div>
+  </section>
+</MarketingLayout>
+
+<script>
+  import { composeDraft, formats } from "../lib/content-engine";
+
+  const stack = document.getElementById("feed-stack");
+  const sample = document.getElementById("compose-sample");
+
+  function cardHtml(seed: number) {
+    const d = composeDraft({ seed });
+    const format = formats.find((f) => f.id === d.formatId)?.label ?? d.formatId;
+    return `<article class="feed-card">
+      <header><span>${format}</span><span>${d.channelHint}</span></header>
+      <h3>${d.title}</h3>
+      <p>${d.body.split("\n").filter(Boolean).slice(0, 3).join(" ")}</p>
+    </article>`;
+  }
+
+  if (stack) {
+    stack.innerHTML = [1, 2, 3].map((n) => cardHtml(1000 + n * 97)).join("");
+  }
+
+  if (sample) {
+    const d = composeDraft({ topicId: "apis", formatId: "field-note", voiceId: "grounded", seed: 2026 });
+    sample.textContent = `${d.title}\n\n${d.body}`;
+  }
+</script>
+
+<style>
+  .open {
+    padding: clamp(2.5rem, 6vw, 4.5rem) 0 2rem;
+  }
+
+  .open__grid {
+    display: grid;
+    gap: 2.5rem;
+    align-items: center;
+  }
+
+  .open__brand {
+    font-size: clamp(2.6rem, 7vw, 4.6rem);
+    line-height: 1.08;
+    margin: 0.85rem 0 1rem;
+    max-width: 12ch;
+    padding-top: 0.1em;
+  }
+
+  .open__brand span {
+    font-size: 0.35em;
+    vertical-align: super;
+    color: var(--ink-muted);
+  }
+
+  .open__lede {
+    font-size: clamp(1.05rem, 2vw, 1.22rem);
+    color: var(--ink-soft);
+    font-weight: 500;
+    max-width: 34rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .open__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+  }
+
+  .feed-rail {
+    background: var(--ink);
+    color: #e8eef7;
+    border-radius: 24px;
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    animation: float-y 8s ease-in-out infinite;
+  }
+
+  .feed-rail__label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8fa3b8;
+    margin-bottom: 0.85rem;
+    padding: 0 0.35rem;
+  }
+
+  .feed-rail__stack {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .feed-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 0.9rem 1rem;
+  }
+
+  .feed-card header {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #7ddec9;
+    margin-bottom: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .feed-card h3 {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    color: #fff;
+    margin-bottom: 0.4rem;
+  }
+
+  .feed-card p {
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: #b7c6d6;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .thesis {
+    padding: clamp(3rem, 6vw, 4.5rem) 0;
+    border-block: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  .thesis__inner h2 {
+    font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+    max-width: 18ch;
+    margin-bottom: 1.5rem;
+  }
+
+  .thesis__cols {
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .thesis__cols p {
+    color: var(--ink-soft);
+    font-weight: 500;
+    font-size: 1.05rem;
+    max-width: 36rem;
+  }
+
+  .product {
+    padding: clamp(3rem, 7vw, 5rem) 0;
+  }
+
+  .product__intro {
+    max-width: 36rem;
+    margin-bottom: 2.5rem;
+  }
+
+  .product__intro h2 {
+    font-size: clamp(1.7rem, 3.5vw, 2.4rem);
+    margin-top: 0.45rem;
+  }
+
+  .product__block {
+    display: grid;
+    gap: 1.25rem;
+    margin-bottom: 2.5rem;
+    align-items: center;
+  }
+
+  .product__copy h3 {
+    font-family: var(--font-body);
+    font-size: 1.35rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .product__copy p {
+    color: var(--ink-soft);
+    font-weight: 500;
+    max-width: 34rem;
+  }
+
+  .product__ui {
+    overflow: hidden;
+    background: var(--ink);
+    color: #e8eef7;
+  }
+
+  .product__ui--light {
+    background: var(--elevated);
+    color: var(--ink);
+    padding: 1.15rem;
+  }
+
+  .ui-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.78rem;
+    color: #9db0c5;
+  }
+
+  .ui-bar span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3d4f66;
+  }
+
+  .ui-bar span:first-child {
+    background: #c9852e;
+  }
+
+  .ui-bar em {
+    margin-left: auto;
+    font-style: normal;
+  }
+
+  .product__ui pre {
+    margin: 0;
+    padding: 1.15rem 1.2rem 1.35rem;
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    font-size: 0.86rem;
+    line-height: 1.55;
+    min-height: 11rem;
+  }
+
+  .mini-pipe {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .mini-pipe li {
+    display: grid;
+    gap: 0.2rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .mini-pipe li:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .mini-pipe span {
+    color: var(--ink-muted);
+    font-size: 0.9rem;
+  }
+
+  .mini-cover {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .mini-cover h4 {
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    margin-bottom: 0.2rem;
+  }
+
+  .mini-cover p {
+    color: var(--ink-muted);
+    font-size: 0.88rem;
+  }
+
+  .mini-brand {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+  }
+
+  .mini-brand span {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+    margin-bottom: 0.2rem;
+  }
+
+  .mini-brand strong {
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+  }
+
+  .who {
+    padding: clamp(3rem, 6vw, 4.5rem) 0;
+    background: rgba(255, 255, 255, 0.45);
+    border-block: 1px solid var(--line);
+  }
+
+  .who h2 {
+    font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+    margin: 0.45rem 0 1.5rem;
+  }
+
+  .who__list {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .who__list li {
+    padding: 1.15rem 1.25rem;
+    border-radius: var(--radius-lg);
+    background: var(--elevated);
+    border: 1px solid var(--line);
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .who__list strong {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+  }
+
+  .who__list span {
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .plans {
+    padding: clamp(3rem, 7vw, 5rem) 0;
+  }
+
+  .plans__intro {
+    max-width: 34rem;
+    margin-bottom: 1.75rem;
+  }
+
+  .plans__intro h2 {
+    font-size: clamp(1.7rem, 3.5vw, 2.3rem);
+    margin-top: 0.45rem;
+  }
+
+  .plans__grid {
+    display: grid;
+    gap: 1rem;
+    align-items: stretch;
+  }
+
+  .plan {
+    padding: 1.35rem;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .plan h3 {
+    font-family: var(--font-body);
+    font-size: 1.2rem;
+  }
+
+  .plan__price {
+    font-family: var(--font-display);
+    font-size: 2.3rem;
+    letter-spacing: -0.04em;
+    margin: 0.45rem 0 1rem;
+  }
+
+  .plan__price span {
+    font-size: 0.95rem;
+    color: var(--ink-muted);
+  }
+
+  .plan ul {
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 0;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  .plan .btn {
+    margin-top: auto;
+    padding-top: 1.25rem;
+  }
+
+  .plan--featured {
+    border-color: rgba(12, 143, 124, 0.35);
+    box-shadow: 0 0 0 1px rgba(12, 143, 124, 0.12), var(--shadow-md);
+  }
+
+  .plan--featured .badge {
+    margin-bottom: 0.75rem;
+  }
+
+  .close {
+    padding: 0 0 2rem;
+  }
+
+  .close__panel {
+    display: grid;
+    gap: 1.25rem;
+    padding: 1.75rem;
+    background:
+      radial-gradient(600px 240px at 100% 0%, rgba(12, 143, 124, 0.16), transparent 60%),
+      var(--elevated);
+  }
+
+  .close__panel h2 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    margin-bottom: 0.45rem;
+  }
+
+  @media (min-width: 860px) {
+    .open__grid {
+      grid-template-columns: 1.05fr 0.95fr;
+    }
+
+    .thesis__cols {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .product__block {
+      grid-template-columns: 1fr 1.05fr;
+      gap: 2rem;
+    }
+
+    .product__block--flip .product__copy {
+      order: 2;
+    }
+
+    .who__list {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .plans__grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .close__panel {
+      grid-template-columns: 1.4fr auto;
+      align-items: center;
+      padding: 2.1rem;
+    }
+  }
+</style>

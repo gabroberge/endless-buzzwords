@@ -1,0 +1,57 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import AppSidebar from "../components/app/AppSidebar.astro";
+import AppTopbar from "../components/app/AppTopbar.astro";
+
+interface Props {
+  title: string;
+  eyebrow?: string;
+}
+
+const { title, eyebrow } = Astro.props;
+const pageTitle = `${title} · Endless Buzzwords™`;
+---
+
+<BaseLayout title={pageTitle} bodyClass="app-body">
+  <div class="app-shell">
+    <AppSidebar />
+    <div class="app-main">
+      <AppTopbar title={title} eyebrow={eyebrow} />
+      <div class="app-content">
+        <slot />
+      </div>
+    </div>
+  </div>
+</BaseLayout>
+
+<style is:global>
+  .app-body {
+    background: #e8eef5;
+  }
+
+  .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-w) 1fr;
+    min-height: 100vh;
+  }
+
+  .app-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-content {
+    padding: 1.25rem 1.5rem 2.5rem;
+  }
+
+  @media (max-width: 900px) {
+    .app-shell {
+      grid-template-columns: 1fr;
+    }
+
+    .app-content {
+      padding: 1rem 1rem 5.5rem;
+    }
+  }
+</style>

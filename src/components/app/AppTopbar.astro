@@ -1,0 +1,71 @@
+---
+interface Props {
+  title: string;
+  eyebrow?: string;
+}
+
+const { title, eyebrow = "Desk" } = Astro.props;
+---
+
+<header class="topbar">
+  <div>
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+  </div>
+  <div class="topbar__meta">
+    <span class="badge" data-brand-badge>Brand</span>
+    <span class="badge badge-muted" data-channels-badge>Channels</span>
+  </div>
+</header>
+
+<script>
+  import { loadWorkspace } from "../../lib/storage";
+
+  function refresh() {
+    const ws = loadWorkspace();
+    const brand = document.querySelector("[data-brand-badge]");
+    const channels = document.querySelector("[data-channels-badge]");
+    if (brand) brand.textContent = ws.brandName;
+    if (channels) {
+      const n = ws.channels.filter((c) => c.connected).length;
+      channels.textContent = `${n} channels connected`;
+    }
+  }
+
+  refresh();
+  window.addEventListener("eb:workspace", refresh);
+</script>
+
+<style>
+  .topbar {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.35rem 1.5rem 0.35rem;
+  }
+
+  h1 {
+    font-size: clamp(1.45rem, 2vw, 1.85rem);
+    margin-top: 0.2rem;
+  }
+
+  .topbar__meta {
+    display: none;
+    gap: 0.45rem;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  @media (min-width: 720px) {
+    .topbar__meta {
+      display: flex;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .topbar {
+      padding: 1rem 1rem 0.25rem;
+    }
+  }
+</style>

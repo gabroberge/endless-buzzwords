@@ -1,0 +1,29 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import MarketingHeader from "../components/marketing/MarketingHeader.astro";
+import MarketingFooter from "../components/marketing/MarketingFooter.astro";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<BaseLayout title={title} description={description} bodyClass="marketing-body">
+  <MarketingHeader />
+  <main>
+    <slot />
+  </main>
+  <MarketingFooter />
+</BaseLayout>
+
+<style is:global>
+  .marketing-body {
+    background:
+      radial-gradient(1200px 600px at 10% -10%, rgba(12, 143, 124, 0.16), transparent 55%),
+      radial-gradient(900px 500px at 90% 0%, rgba(201, 133, 46, 0.12), transparent 50%),
+      linear-gradient(180deg, #f7f9fc 0%, var(--surface) 40%, #e8eef6 100%);
+  }
+</style>

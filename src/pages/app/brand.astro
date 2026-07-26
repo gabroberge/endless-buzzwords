@@ -1,0 +1,242 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Brand" eyebrow="Configuration">
+  <section class="brand-page">
+    <form class="card form" id="form">
+      <label>
+        Brand name
+        <input id="brand" type="text" maxlength="80" />
+      </label>
+
+      <label>
+        Default voice
+        <select id="voice"></select>
+      </label>
+
+      <label>
+        Weekly cadence target
+        <input id="cadence" type="number" min="1" max="21" />
+      </label>
+
+      <fieldset>
+        <legend>Byline</legend>
+        <div id="byline" class="choices"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Focus topics</legend>
+        <div id="topics" class="topics"></div>
+      </fieldset>
+
+      <div class="actions">
+        <button class="btn btn-accent" type="submit">Save brand</button>
+        <button class="btn btn-ghost" type="button" id="reset">Reset desk</button>
+      </div>
+    </form>
+
+    <aside class="card aside">
+      <h2>How brand settings are used</h2>
+      <p class="muted">
+        Voice becomes the default framing in Compose. Byline controls how posts are attributed in the desk. Cadence sets the weekly publishing target on Pipeline.
+      </p>
+      <ul>
+        <li>Focus topics bias Compose defaults</li>
+        <li>Channel connections live under Channels</li>
+        <li>Desk state persists in localStorage</li>
+      </ul>
+      <p class="muted tiny" id="density"></p>
+    </aside>
+  </section>
+</AppLayout>
+
+<script>
+  import { topics } from "../../lib/data/topics";
+  import { bylineModes, voiceProfiles } from "../../lib/data/voice";
+  import { computeOpsMetrics } from "../../lib/metrics";
+  import { loadWorkspace, resetWorkspace, updateWorkspace } from "../../lib/storage";
+  import { showToast } from "../../lib/ui";
+
+  const brandEl = document.getElementById("brand") as HTMLInputElement;
+  const voiceEl = document.getElementById("voice") as HTMLSelectElement;
+  const cadenceEl = document.getElementById("cadence") as HTMLInputElement;
+  const bylineEl = document.getElementById("byline")!;
+  const topicsEl = document.getElementById("topics")!;
+  const densityEl = document.getElementById("density")!;
+
+  function hydrate() {
+    const ws = loadWorkspace();
+    brandEl.value = ws.brandName;
+    cadenceEl.value = String(ws.cadenceTarget);
+    voiceEl.innerHTML = voiceProfiles
+      .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label} — ${v.description}</option>`)
+      .join("");
+    bylineEl.innerHTML = bylineModes
+      .map(
+        (b) => `
+      <label class="choice">
+        <input type="radio" name="byline" value="${b.id}" ${ws.bylineId === b.id ? "checked" : ""} />
+        <span><strong>${b.label}</strong><small>${b.note}</small></span>
+      </label>`,
+      )
+      .join("");
+    topicsEl.innerHTML = topics
+      .map(
+        (t) => `
+      <label class="choice">
+        <input type="checkbox" value="${t.id}" ${ws.focusTopics.includes(t.id) ? "checked" : ""} />
+        <span>${t.label}</span>
+      </label>`,
+      )
+      .join("");
+    densityEl.textContent = `Lived-experience density: ${computeOpsMetrics(ws).experienceDensity}`;
+  }
+
+  document.getElementById("form")?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const byline = (document.querySelector('input[name="byline"]:checked') as HTMLInputElement | null)?.value ?? "brand";
+    const focusTopics = [...topicsEl.querySelectorAll("input:checked")].map((el) => (el as HTMLInputElement).value);
+    updateWorkspace((s) => ({
+      ...s,
+      brandName: brandEl.value.trim() || s.brandName,
+      voiceId: voiceEl.value as any,
+      bylineId: byline as any,
+      cadenceTarget: Math.min(21, Math.max(1, Number(cadenceEl.value) || s.cadenceTarget)),
+      focusTopics: focusTopics.length ? focusTopics : s.focusTopics,
+    }));
+    showToast("Brand settings saved");
+    window.dispatchEvent(new Event("eb:workspace"));
+    hydrate();
+  });
+
+  document.getElementById("reset")?.addEventListener("click", () => {
+    if (!window.confirm("Reset this desk? Drafts, pipeline changes, and channel connections will be cleared.")) return;
+    resetWorkspace();
+    hydrate();
+    showToast("Desk reset");
+    window.dispatchEvent(new Event("eb:workspace"));
+  });
+
+  hydrate();
+</script>
+
+<style>
+  .brand-page {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .form,
+  .aside {
+    padding: 1.2rem;
+  }
+
+  .form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  label,
+  legend {
+    display: grid;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  fieldset {
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  input[type="text"],
+  input[type="number"],
+  select {
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .choices,
+  .topics {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .topics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    color: var(--ink);
+    font-size: 0.9rem;
+    font-weight: 650;
+  }
+
+  .choice small {
+    display: block;
+    margin-top: 0.15rem;
+    color: var(--ink-muted);
+    font-weight: 500;
+    font-size: 0.8rem;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+  }
+
+  .aside h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .aside ul {
+    margin-top: 1rem;
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .aside li {
+    font-size: 0.92rem;
+    color: var(--ink-muted);
+    padding-left: 0.9rem;
+    position: relative;
+  }
+
+  .aside li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.55rem;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .tiny {
+    margin-top: 1.25rem;
+    font-size: 0.85rem;
+  }
+
+  @media (min-width: 900px) {
+    .brand-page {
+      grid-template-columns: 1.2fr 0.8fr;
+      align-items: start;
+    }
+  }
+</style>

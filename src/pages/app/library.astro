@@ -1,0 +1,156 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Library" eyebrow="Archive">
+  <section class="library">
+    <div class="card intro">
+      <h2>Drafts and published pieces</h2>
+      <p class="muted">Saved locally in this browser. Queue anything back into the pipeline when a slot opens.</p>
+    </div>
+    <div class="grid">
+      <article class="card panel">
+        <h3>Drafts</h3>
+        <ul id="drafts" class="list"></ul>
+      </article>
+      <article class="card panel">
+        <h3>Recently published</h3>
+        <ul id="published" class="list"></ul>
+      </article>
+    </div>
+  </section>
+</AppLayout>
+
+<script>
+  import { loadWorkspace, updateWorkspace } from "../../lib/storage";
+  import { formatDate, showToast } from "../../lib/ui";
+
+  function render() {
+    const ws = loadWorkspace();
+    const drafts = document.getElementById("drafts");
+    const published = document.getElementById("published");
+
+    if (drafts) {
+      drafts.innerHTML = ws.drafts.length
+        ? ws.drafts
+            .map(
+              (d) => `
+        <li>
+          <div>
+            <strong>${d.title}</strong>
+            <p class="muted">${d.formatId.replaceAll("-", " ")} · ${formatDate(d.createdAt)}</p>
+          </div>
+          <button class="btn btn-ghost btn-sm" type="button" data-queue="${d.id}">Queue</button>
+        </li>`,
+            )
+            .join("")
+        : `<li><div><strong>Empty</strong><p class="muted">Compose to build your library.</p></div></li>`;
+    }
+
+    if (published) {
+      const items = ws.pipeline.filter((p) => p.status === "published");
+      published.innerHTML = items.length
+        ? items
+            .map(
+              (p) => `
+        <li>
+          <div>
+            <strong>${p.title}</strong>
+            <p class="muted">${p.channelId} · ${formatDate(p.when)}</p>
+          </div>
+        </li>`,
+            )
+            .join("")
+        : `<li><div><strong>Nothing published yet</strong><p class="muted">Advance items from Pipeline.</p></div></li>`;
+    }
+
+    document.querySelectorAll("[data-queue]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = (btn as HTMLElement).dataset.queue;
+        const draft = loadWorkspace().drafts.find((d) => d.id === id);
+        if (!draft) return;
+        updateWorkspace((s) => ({
+          ...s,
+          pipeline: [
+            {
+              id: `p_${Date.now()}`,
+              draftId: draft.id,
+              title: draft.title,
+              channelId: draft.channelHint === "x" ? "x" : draft.channelHint === "youtube" ? "youtube" : "linkedin",
+              when: new Date(Date.now() + 86400000).toISOString(),
+              status: "scheduled" as const,
+            },
+            ...s.pipeline,
+          ],
+        }));
+        showToast("Queued");
+        window.dispatchEvent(new Event("eb:workspace"));
+        render();
+      });
+    });
+  }
+
+  render();
+</script>
+
+<style>
+  .intro {
+    padding: 1.15rem;
+    margin-bottom: 1rem;
+  }
+
+  .intro h2 {
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .grid {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .panel {
+    padding: 1.15rem;
+  }
+
+  .panel h3 {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .list {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .list li:last-child {
+    border-bottom: none;
+  }
+
+  .list strong {
+    display: block;
+    font-size: 0.94rem;
+  }
+
+  .list .muted {
+    font-size: 0.8rem;
+    margin-top: 0.2rem;
+  }
+
+  @media (min-width: 860px) {
+    .grid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+</style>

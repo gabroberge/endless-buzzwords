@@ -1,0 +1,149 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Coverage" eyebrow="Topics">
+  <section class="coverage">
+    <aside class="card controls">
+      <p class="muted">
+        Coverage shows which technical topics your brand is prepared to speak on in public. Refresh to rebalance emphasis.
+      </p>
+      <button class="btn btn-accent" type="button" id="build">Build coverage map</button>
+      <button class="btn btn-ghost" type="button" id="rebalance">Rebalance emphasis</button>
+      <button class="btn btn-soft" type="button" id="save">Save map</button>
+    </aside>
+
+    <article class="card canvas" id="view" aria-live="polite">
+      <header>
+        <div>
+          <p class="eyebrow" id="audience">Audience</p>
+          <h2 id="title">Public topic coverage</h2>
+        </div>
+        <span class="badge" id="breadth">Breadth —</span>
+      </header>
+      <div class="clusters" id="clusters"></div>
+    </article>
+  </section>
+</AppLayout>
+
+<script>
+  import { buildCoverage, rebalanceCoverage, type CoverageMap } from "../../lib/coverage-engine";
+  import { loadWorkspace, updateWorkspace } from "../../lib/storage";
+  import { showToast } from "../../lib/ui";
+
+  let current: CoverageMap | null = loadWorkspace().coverage;
+
+  function render(map: CoverageMap) {
+    current = map;
+    document.getElementById("audience")!.textContent = `For ${map.audience}`;
+    document.getElementById("title")!.textContent = map.title;
+    document.getElementById("breadth")!.textContent = `Breadth ${map.breadth}%`;
+    document.getElementById("clusters")!.innerHTML = map.clusters
+      .map(
+        (c) => `
+      <section class="cluster">
+        <h3>${c.label}</h3>
+        <ul>${c.topics.map((t) => `<li>${t}</li>`).join("")}</ul>
+      </section>`,
+      )
+      .join("");
+  }
+
+  document.getElementById("build")?.addEventListener("click", () => {
+    render(buildCoverage(Date.now()));
+  });
+
+  document.getElementById("rebalance")?.addEventListener("click", () => {
+    if (!current) {
+      render(buildCoverage(Date.now()));
+    } else {
+      render(rebalanceCoverage(current));
+    }
+    showToast("Emphasis updated. Topic set unchanged.");
+  });
+
+  document.getElementById("save")?.addEventListener("click", () => {
+    if (!current) return;
+    updateWorkspace((s) => ({ ...s, coverage: current }));
+    showToast("Coverage map saved");
+    window.dispatchEvent(new Event("eb:workspace"));
+  });
+
+  if (current) render(current);
+  else render(buildCoverage(42));
+</script>
+
+<style>
+  .coverage {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .controls,
+  .canvas {
+    padding: 1.15rem;
+  }
+
+  .controls {
+    display: grid;
+    gap: 0.75rem;
+    align-content: start;
+  }
+
+  .canvas header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .canvas h2 {
+    margin-top: 0.25rem;
+    font-size: 1.4rem;
+  }
+
+  .clusters {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .cluster {
+    padding: 1rem;
+    border-radius: var(--radius);
+    background: #f7f9fc;
+    border: 1px solid var(--line);
+  }
+
+  .cluster h3 {
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    margin-bottom: 0.55rem;
+  }
+
+  .cluster ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .cluster li {
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    background: #fff;
+    border: 1px solid var(--line);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  @media (min-width: 960px) {
+    .coverage {
+      grid-template-columns: 260px 1fr;
+      align-items: start;
+    }
+
+    .clusters {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+</style>

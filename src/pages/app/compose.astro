@@ -1,0 +1,249 @@
+---
+import AppLayout from "../../layouts/AppLayout.astro";
+---
+
+<AppLayout title="Compose" eyebrow="Create">
+  <section class="compose">
+    <aside class="card controls">
+      <label>
+        Topic
+        <select id="topic"></select>
+      </label>
+      <label>
+        Format
+        <select id="format"></select>
+      </label>
+      <label>
+        Voice
+        <select id="voice"></select>
+      </label>
+
+      <div class="btn-stack">
+        <button class="btn btn-accent" type="button" id="generate">Compose</button>
+        <button class="btn btn-ghost" type="button" id="again">Compose again</button>
+      </div>
+
+      <p class="hint muted">Adjustments</p>
+      <div class="transform-grid">
+        <button class="btn btn-soft btn-sm" type="button" data-action="linkedin">Repackage for LinkedIn</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="x">Compress for X</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="cta">Add a reply prompt</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="takeaway">Add a takeaway</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="sharpen">Sharpen the take</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="soften">Soften certainty</button>
+        <button class="btn btn-soft btn-sm" type="button" data-action="stakes">Raise the stakes</button>
+      </div>
+
+      <div class="persist-actions">
+        <button class="btn btn-primary btn-sm" type="button" id="save">Save to library</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="queue">Queue to pipeline</button>
+        <button class="btn btn-ghost btn-sm" type="button" id="copy">Copy</button>
+      </div>
+    </aside>
+
+    <article class="card canvas" aria-live="polite">
+      <header class="canvas__meta">
+        <span class="badge" id="channel">linkedin</span>
+        <span class="badge badge-muted" id="signal">Signal —</span>
+        <span class="badge badge-muted" id="onmsg">On-message —</span>
+        <span class="badge badge-warm" id="voice-badge">Voice</span>
+      </header>
+      <h2 id="title">Draft appears here</h2>
+      <pre id="body">Choose a topic and format, then compose.</pre>
+    </article>
+  </section>
+</AppLayout>
+
+<script>
+  import {
+    composeDraft,
+    draftText,
+    formats,
+    topics,
+    transformDraft,
+    type Draft,
+    type TransformAction,
+  } from "../../lib/content-engine";
+  import { voiceProfiles } from "../../lib/data/voice";
+  import { loadWorkspace, updateWorkspace } from "../../lib/storage";
+  import { showToast } from "../../lib/ui";
+
+  const topicEl = document.getElementById("topic") as HTMLSelectElement;
+  const formatEl = document.getElementById("format") as HTMLSelectElement;
+  const voiceEl = document.getElementById("voice") as HTMLSelectElement;
+  const titleEl = document.getElementById("title")!;
+  const bodyEl = document.getElementById("body")!;
+  const channelEl = document.getElementById("channel")!;
+  const signalEl = document.getElementById("signal")!;
+  const onmsgEl = document.getElementById("onmsg")!;
+  const voiceBadge = document.getElementById("voice-badge")!;
+
+  let current: Draft | null = null;
+  const ws = loadWorkspace();
+
+  topicEl.innerHTML = topics
+    .map((t) => `<option value="${t.id}" ${ws.focusTopics.includes(t.id) ? "selected" : ""}>${t.label}</option>`)
+    .join("");
+  formatEl.innerHTML = formats.map((f) => `<option value="${f.id}">${f.label}</option>`).join("");
+  voiceEl.innerHTML = voiceProfiles
+    .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label}</option>`)
+    .join("");
+
+  function render(draft: Draft) {
+    current = draft;
+    titleEl.textContent = draft.title;
+    bodyEl.textContent = draft.body;
+    channelEl.textContent = draft.channelHint;
+    signalEl.textContent = `Signal ${draft.signal}`;
+    onmsgEl.textContent = `On-message ${draft.onMessage}%`;
+    voiceBadge.textContent = voiceProfiles.find((v) => v.id === draft.voiceId)?.label ?? draft.voiceId;
+  }
+
+  function create() {
+    render(
+      composeDraft({
+        topicId: topicEl.value,
+        formatId: formatEl.value as any,
+        voiceId: voiceEl.value as any,
+      }),
+    );
+  }
+
+  document.getElementById("generate")?.addEventListener("click", create);
+  document.getElementById("again")?.addEventListener("click", create);
+
+  document.querySelectorAll("[data-action]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (!current) {
+        create();
+        return;
+      }
+      const action = (btn as HTMLElement).dataset.action as TransformAction;
+      render(transformDraft(current, action));
+      if (action === "linkedin" || action === "x") {
+        showToast("Variant created without additional source material");
+      } else {
+        showToast("Draft updated");
+      }
+    });
+  });
+
+  document.getElementById("save")?.addEventListener("click", () => {
+    if (!current) return;
+    updateWorkspace((s) => ({
+      ...s,
+      drafts: [current!, ...s.drafts.filter((d) => d.id !== current!.id)].slice(0, 50),
+    }));
+    showToast("Saved to library");
+    window.dispatchEvent(new Event("eb:workspace"));
+  });
+
+  document.getElementById("queue")?.addEventListener("click", () => {
+    if (!current) return;
+    const channelId =
+      current.channelHint === "x" ? "x" : current.channelHint === "youtube" ? "youtube" : "linkedin";
+    updateWorkspace((s) => ({
+      ...s,
+      drafts: [current!, ...s.drafts.filter((d) => d.id !== current!.id)].slice(0, 50),
+      pipeline: [
+        {
+          id: `p_${Date.now()}`,
+          draftId: current!.id,
+          title: current!.title,
+          channelId,
+          when: new Date(Date.now() + 86400000 * 2).toISOString(),
+          status: "scheduled" as const,
+        },
+        ...s.pipeline,
+      ],
+    }));
+    showToast("Queued to pipeline");
+    window.dispatchEvent(new Event("eb:workspace"));
+  });
+
+  document.getElementById("copy")?.addEventListener("click", async () => {
+    if (!current) return;
+    await navigator.clipboard.writeText(draftText(current));
+    showToast("Copied");
+  });
+
+  create();
+</script>
+
+<style>
+  .compose {
+    display: grid;
+    gap: 1rem;
+  }
+
+  .controls,
+  .canvas {
+    padding: 1.15rem;
+  }
+
+  .controls {
+    display: grid;
+    gap: 0.85rem;
+    align-content: start;
+  }
+
+  label {
+    display: grid;
+    gap: 0.35rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  select {
+    min-height: 44px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    background: #fff;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .btn-stack,
+  .persist-actions,
+  .transform-grid {
+    display: grid;
+    gap: 0.45rem;
+  }
+
+  .hint {
+    font-size: 0.78rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 0.25rem;
+  }
+
+  .canvas__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+  }
+
+  .canvas h2 {
+    font-size: 1.3rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .canvas pre {
+    margin: 0;
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    line-height: 1.65;
+    color: var(--ink-soft);
+    min-height: 16rem;
+  }
+
+  @media (min-width: 960px) {
+    .compose {
+      grid-template-columns: 300px 1fr;
+      align-items: start;
+    }
+  }
+</style>

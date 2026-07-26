@@ -1,0 +1,165 @@
+---
+const links = [
+  { href: "/#thesis", label: "Why" },
+  { href: "/#product", label: "Product" },
+  { href: "/#plans", label: "Plans" },
+];
+---
+
+<header class="m-header">
+  <div class="container-wide m-header__inner">
+    <a class="brand" href="/" aria-label="Endless Buzzwords home">
+      <span class="brand__mark" aria-hidden="true"></span>
+      <span class="brand__text">
+        <span class="brand__name">Endless Buzzwords</span>
+        <span class="brand__tm">™</span>
+      </span>
+    </a>
+
+    <nav class="m-nav" aria-label="Primary">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+
+    <div class="m-actions">
+      <a class="btn btn-ghost btn-sm" href="/app">Open desk</a>
+      <a class="btn btn-primary btn-sm" href="/app/compose">Start composing</a>
+    </div>
+
+    <button class="m-menu" type="button" aria-expanded="false" aria-controls="mobile-nav" data-menu-toggle>
+      <span class="sr-only">Menu</span>
+      <span></span><span></span>
+    </button>
+  </div>
+
+  <div id="mobile-nav" class="m-mobile" hidden>
+    <nav aria-label="Mobile">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+      <a href="/app">Open desk</a>
+      <a class="btn btn-primary" href="/app/compose">Start composing</a>
+    </nav>
+  </div>
+</header>
+
+<script>
+  const toggle = document.querySelector("[data-menu-toggle]");
+  const panel = document.getElementById("mobile-nav");
+  toggle?.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", String(!open));
+    panel?.toggleAttribute("hidden", open);
+  });
+</script>
+
+<style>
+  .m-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(14px);
+    background: rgba(247, 249, 252, 0.82);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .m-header__inner {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: var(--nav-h);
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+  }
+
+  .brand__mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent) 0%, #0a1628 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  }
+
+  .brand__text {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.15rem;
+  }
+
+  .brand__name {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: -0.03em;
+  }
+
+  .brand__tm {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .m-nav {
+    display: none;
+    gap: 1.25rem;
+    margin-left: auto;
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+  }
+
+  .m-nav a:hover {
+    color: var(--ink);
+  }
+
+  .m-actions {
+    display: none;
+    gap: 0.55rem;
+  }
+
+  .m-menu {
+    margin-left: auto;
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    border: 1px solid var(--line-strong);
+    display: grid;
+    place-content: center;
+    gap: 5px;
+  }
+
+  .m-menu span:not(.sr-only) {
+    display: block;
+    width: 16px;
+    height: 2px;
+    background: var(--ink);
+  }
+
+  .m-mobile {
+    border-top: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.96);
+    padding: 1rem 1.25rem 1.25rem;
+  }
+
+  .m-mobile nav {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .m-mobile a {
+    font-weight: 650;
+  }
+
+  @media (min-width: 900px) {
+    .m-nav,
+    .m-actions {
+      display: flex;
+    }
+
+    .m-menu,
+    .m-mobile {
+      display: none !important;
+    }
+  }
+</style>
