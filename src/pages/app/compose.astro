@@ -4,61 +4,69 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <AppLayout title="Compose" eyebrow="Create">
   <section class="compose">
-    <aside class="card controls">
-      <label id="topic-field">
-        Topic
-        <select id="topic"></select>
-      </label>
-      <div id="topic-empty" class="topic-empty" hidden>
-        <p class="topic-empty__title">No focus topics configured</p>
-        <p class="topic-empty__note muted">Add topics to your brand before composing technical authority.</p>
-        <a class="btn btn-accent btn-sm" href="/app/brand">Configure brand</a>
-      </div>
-      <label>
-        Format
-        <select id="format"></select>
-      </label>
-      <label>
-        Voice
-        <select id="voice"></select>
-      </label>
-
-      <div class="btn-stack">
+    <aside class="card controls controls--idle" id="controls">
+      <div class="controls__setup">
+        <label id="topic-field">
+          Topic
+          <select id="topic"></select>
+        </label>
+        <div id="topic-empty" class="topic-empty" hidden>
+          <p class="topic-empty__title">No focus topics configured</p>
+          <p class="topic-empty__note muted">Add topics to your brand before composing technical authority.</p>
+          <a class="btn btn-accent btn-sm" href="/app/brand">Configure brand</a>
+        </div>
+        <label>
+          Format
+          <select id="format"></select>
+        </label>
+        <label>
+          Voice
+          <select id="voice"></select>
+        </label>
         <button class="btn btn-accent" type="button" id="generate">Compose</button>
-        <button class="btn btn-ghost" type="button" id="again">Compose again</button>
       </div>
 
-      <p class="hint muted">Transform</p>
-      <div class="transform-grid">
-        <button class="btn btn-soft btn-sm" type="button" data-action="senior">Make it more senior</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="buzzwords">Add buzzwords</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="urgency">Add urgency</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="thought-leadership">Make it thought leadership</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="interview">Turn into interview question</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="roadmap">Repackage as roadmap</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="tradeoff">Add a tradeoff</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="production">Add production framing</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="linkedin">Repackage for LinkedIn</button>
-        <button class="btn btn-soft btn-sm" type="button" data-action="x">Compress for X</button>
+      <div class="controls__section" id="transform-section">
+        <p class="hint muted">Transform</p>
+        <div class="transform-grid">
+          <button class="btn btn-soft btn-sm" type="button" data-action="senior">Make it more senior</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="buzzwords">Add buzzwords</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="urgency">Add urgency</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="thought-leadership">Make it thought leadership</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="interview">Turn into interview question</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="roadmap">Repackage as roadmap</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="tradeoff">Add a tradeoff</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="production">Add production framing</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="linkedin">Repackage for LinkedIn</button>
+          <button class="btn btn-soft btn-sm" type="button" data-action="x">Compress for X</button>
+        </div>
       </div>
 
-      <div class="persist-actions">
-        <button class="btn btn-primary btn-sm" type="button" id="save">Save to library</button>
-        <button class="btn btn-ghost btn-sm" type="button" id="queue">Queue to pipeline</button>
-        <button class="btn btn-ghost btn-sm" type="button" id="copy">Copy</button>
+      <div class="controls__section controls__section--actions" id="persist-section">
+        <div class="persist-actions">
+          <button class="btn btn-primary btn-sm" type="button" id="save">Save to library</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="queue">Queue to pipeline</button>
+          <button class="btn btn-ghost btn-sm" type="button" id="copy">Copy</button>
+        </div>
       </div>
     </aside>
 
-    <article class="card canvas" aria-live="polite">
-      <header class="canvas__meta">
-        <span class="badge" id="channel">linkedin</span>
-        <span class="badge badge-muted" id="authority">Authority —</span>
-        <span class="badge badge-muted" id="buzzwords">Buzzwords —</span>
-        <span class="badge badge-muted" id="engagement">Engagement —</span>
-        <span class="badge badge-warm" id="voice-badge">Voice</span>
-      </header>
-      <h2 id="title">Draft appears here</h2>
-      <pre id="body">Choose a topic and format, then compose.</pre>
+    <article class="card canvas canvas--idle" id="canvas" aria-live="polite">
+      <div class="canvas__idle" id="canvas-idle">
+        <p class="canvas__idle-title">No draft yet</p>
+        <p class="canvas__idle-note muted">Choose topic, format, and voice — then compose.</p>
+      </div>
+      <div class="canvas__content" id="canvas-content" hidden>
+        <header class="canvas__meta" id="canvas-meta">
+          <span class="badge" id="channel">linkedin</span>
+          <span class="badge badge-muted" id="authority">Authority —</span>
+          <span class="badge badge-muted" id="buzzwords">Buzzwords —</span>
+          <span class="badge badge-muted" id="engagement">Engagement —</span>
+          <span class="badge badge-warm" id="voice-badge">Voice</span>
+        </header>
+        <h2 id="title"></h2>
+        <pre id="body"></pre>
+      </div>
     </article>
   </section>
 </AppLayout>
@@ -84,6 +92,10 @@ import AppLayout from "../../layouts/AppLayout.astro";
   const topicEl = document.getElementById("topic") as HTMLSelectElement;
   const formatEl = document.getElementById("format") as HTMLSelectElement;
   const voiceEl = document.getElementById("voice") as HTMLSelectElement;
+  const canvasEl = document.getElementById("canvas")!;
+  const canvasContentEl = document.getElementById("canvas-content")!;
+  const canvasIdleEl = document.getElementById("canvas-idle")!;
+  const controlsEl = document.getElementById("controls")!;
   const titleEl = document.getElementById("title")!;
   const bodyEl = document.getElementById("body")!;
   const channelEl = document.getElementById("channel")!;
@@ -101,15 +113,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
       .filter((topic): topic is (typeof topics)[number] => Boolean(topic));
   }
 
-  function setComposeEnabled(enabled: boolean) {
-    composeReady = enabled;
+  function setDraftActionsEnabled(enabled: boolean) {
     const toggle = (id: string, on: boolean) => {
       const el = document.getElementById(id) as HTMLButtonElement | null;
       if (el) el.disabled = !on;
     };
 
-    toggle("generate", enabled);
-    toggle("again", enabled);
     toggle("save", enabled);
     toggle("queue", enabled);
     toggle("copy", enabled);
@@ -117,22 +126,42 @@ import AppLayout from "../../layouts/AppLayout.astro";
     document.querySelectorAll("[data-action]").forEach((btn) => {
       (btn as HTMLButtonElement).disabled = !enabled;
     });
+
+    controlsEl.classList.toggle("controls--idle", !enabled);
+  }
+
+  function showIdleCanvas() {
+    current = null;
+    canvasEl.classList.add("canvas--idle");
+    canvasContentEl.hidden = true;
+    canvasIdleEl.hidden = false;
+    canvasIdleEl.querySelector(".canvas__idle-title")!.textContent = "No draft yet";
+    canvasIdleEl.querySelector(".canvas__idle-note")!.textContent =
+      "Choose topic, format, and voice — then compose.";
+    titleEl.textContent = "";
+    bodyEl.textContent = "";
+    setDraftActionsEnabled(false);
   }
 
   function showEmptyCanvas() {
     current = null;
-    titleEl.textContent = "No focus topics configured";
-    bodyEl.textContent = "Add topics to your brand before composing technical authority.";
-    channelEl.textContent = "—";
-    authorityEl.textContent = "Authority —";
-    buzzwordsEl.textContent = "Buzzwords —";
-    engagementEl.textContent = "Engagement —";
-    voiceBadge.textContent = "Voice";
-    document.querySelectorAll("[data-action]").forEach((btn) => {
-      const button = btn as HTMLButtonElement;
-      button.disabled = true;
-      button.title = "";
-    });
+    canvasEl.classList.add("canvas--idle");
+    canvasContentEl.hidden = true;
+    canvasIdleEl.hidden = false;
+    canvasIdleEl.querySelector(".canvas__idle-title")!.textContent = "No focus topics configured";
+    canvasIdleEl.querySelector(".canvas__idle-note")!.textContent =
+      "Add topics to your brand before composing technical authority.";
+    titleEl.textContent = "";
+    bodyEl.textContent = "";
+    setDraftActionsEnabled(false);
+  }
+
+  function setComposeEnabled(enabled: boolean) {
+    composeReady = enabled;
+    const generate = document.getElementById("generate") as HTMLButtonElement | null;
+    if (generate) generate.disabled = !enabled;
+    if (!enabled) setDraftActionsEnabled(false);
+    else if (!current) setDraftActionsEnabled(false);
   }
 
   function hydrateTopics() {
@@ -160,6 +189,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
     if (current && !available.some((t) => t.id === current!.topicId)) {
       current = null;
     }
+
+    if (!current) showIdleCanvas();
   }
 
   const ws = loadWorkspace();
@@ -176,6 +207,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   function render(draft: Draft) {
     current = draft;
+    canvasEl.classList.remove("canvas--idle");
+    canvasContentEl.hidden = false;
+    canvasIdleEl.hidden = true;
     titleEl.textContent = draft.title;
     bodyEl.textContent = draft.body;
     channelEl.textContent = draft.channelHint;
@@ -184,6 +218,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     engagementEl.textContent = `Engagement: ${engagementLabel(draft.signal)}`;
     voiceBadge.textContent = voiceProfiles.find((v) => v.id === draft.voiceId)?.label ?? draft.voiceId;
     updateTransformControls(draft);
+    setDraftActionsEnabled(true);
   }
 
   function updateTransformControls(draft: Draft) {
@@ -209,14 +244,10 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   document.getElementById("generate")?.addEventListener("click", create);
-  document.getElementById("again")?.addEventListener("click", create);
 
   document.querySelectorAll("[data-action]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (!current) {
-        create();
-        return;
-      }
+      if (!current) return;
       const action = (btn as HTMLElement).dataset.action as TransformAction;
       const outcome = applyTransform(current, action);
       render(outcome.draft);
@@ -274,7 +305,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
   });
 
   hydrateTopics();
-  if (composeReady) create();
 
   window.addEventListener("eb:workspace", hydrateTopics);
 </script>
@@ -284,33 +314,54 @@ import AppLayout from "../../layouts/AppLayout.astro";
     display: grid;
     gap: 1rem;
     min-width: 0;
+    align-items: start;
   }
 
   .controls,
   .canvas {
-    padding: 1.15rem;
+    padding: 1.2rem;
     min-width: 0;
   }
 
   .controls {
     display: grid;
-    gap: 0.85rem;
+    gap: 1rem;
     align-content: start;
+  }
+
+  .controls__setup {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .controls__section {
+    display: grid;
+    gap: 0.55rem;
+    padding-top: 0.95rem;
+    border-top: 1px solid var(--line);
+    transition: opacity 0.2s var(--ease);
+  }
+
+  .controls--idle .controls__section {
+    opacity: 0.42;
+  }
+
+  .controls__section--actions {
+    padding-top: 0.85rem;
   }
 
   label {
     display: grid;
     gap: 0.35rem;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 700;
     color: var(--ink-muted);
   }
 
-  #topic-field[hidden] {
-    display: none !important;
-  }
-
-  .topic-empty[hidden] {
+  #topic-field[hidden],
+  .topic-empty[hidden],
+  .canvas__content[hidden],
+  .canvas__idle[hidden] {
     display: none !important;
   }
 
@@ -324,11 +375,16 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   select {
-    min-height: 44px;
+    min-height: 42px;
     border-radius: 10px;
     border: 1px solid var(--line-strong);
     background: #fff;
     padding: 0.5rem 0.75rem;
+    font-weight: 550;
+  }
+
+  #generate {
+    margin-top: 0.15rem;
   }
 
   .topic-empty__title {
@@ -354,11 +410,25 @@ import AppLayout from "../../layouts/AppLayout.astro";
     cursor: not-allowed;
   }
 
-  .btn-stack,
-  .persist-actions,
+  .persist-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
   .transform-grid {
     display: grid;
-    gap: 0.45rem;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  .transform-grid .btn {
+    justify-content: flex-start;
+    min-height: 38px;
+    padding-inline: 0.85rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 650;
   }
 
   .transform-grid .btn:disabled {
@@ -366,27 +436,61 @@ import AppLayout from "../../layouts/AppLayout.astro";
     cursor: not-allowed;
     white-space: normal;
     line-height: 1.25;
-    text-align: center;
+    text-align: left;
   }
 
   .hint {
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-top: 0.25rem;
+    letter-spacing: 0.07em;
+    margin: 0;
+  }
+
+  .canvas--idle {
+    padding: 1.35rem 1.4rem;
+  }
+
+  .canvas__idle {
+    display: grid;
+    gap: 0.35rem;
+    padding: 1.1rem 1.15rem;
+    border-radius: 12px;
+    border: 1px dashed var(--line-strong);
+    background: #f8fafc;
+  }
+
+  .canvas__idle-title {
+    margin: 0;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    font-weight: 750;
+    color: var(--ink);
+  }
+
+  .canvas__idle-note {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
+  }
+
+  .canvas__content {
+    display: grid;
+    gap: 0;
   }
 
   .canvas__meta {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.95rem;
   }
 
   .canvas h2 {
-    font-size: 1.3rem;
-    margin-bottom: 0.85rem;
+    font-family: var(--font-body);
+    font-size: 1.15rem;
+    font-weight: 750;
+    margin-bottom: 0.75rem;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
@@ -395,10 +499,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
     margin: 0;
     white-space: pre-wrap;
     font-family: var(--font-mono);
-    font-size: 0.92rem;
+    font-size: 0.9rem;
     line-height: 1.65;
     color: var(--ink-soft);
-    min-height: 12rem;
     max-height: min(52vh, 28rem);
     overflow-x: hidden;
     overflow-y: auto;
@@ -420,8 +523,11 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   @media (min-width: 960px) {
     .compose {
-      grid-template-columns: 300px 1fr;
-      align-items: start;
+      grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
+    }
+
+    .transform-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
   }
 </style>
