@@ -1,0 +1,48 @@
+:root {
+  --app-drawer-backdrop-bg: rgba(10, 22, 40, 0.42);
+  --app-drawer-panel-shadow: 0 12px 40px rgba(10, 22, 40, 0.28);
+  --app-drawer-panel-width-left: min(18.5rem, 86vw);
+  --app-drawer-panel-width-right: min(22rem, 92vw);
+}
+
+.app-drawer[hidden] {
+  display: none !important;
+}
+
+body.app-drawer-open {
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .app-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+  }
+
+  .app-drawer__backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--app-drawer-backdrop-bg);
+  }
+
+  .app-drawer__panel {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--app-drawer-panel-shadow);
+    outline: none;
+  }
+
+  .app-drawer--left .app-drawer__panel {
+    left: 0;
+    width: var(--app-drawer-panel-width-left);
+  }
+
+  .app-drawer--right .app-drawer__panel {
+    right: 0;
+    width: var(--app-drawer-panel-width-right);
+  }
+}

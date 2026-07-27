@@ -36,6 +36,7 @@ import { withBase } from "../../lib/paths";
     </section>
 
     <aside class="lib-preview" id="lib-preview" hidden aria-label="Preview">
+      <div class="lib-preview__backdrop" data-preview-backdrop tabindex="-1" aria-hidden="true"></div>
       <div class="lib-preview__panel">
         <header class="lib-preview__head">
           <span class="lib-preview__label">Preview</span>
@@ -99,12 +100,17 @@ import { withBase } from "../../lib/paths";
   const noMatchesEl = document.getElementById("no-matches")!;
   const libraryPage = document.getElementById("library-page")!;
   const previewEl = document.getElementById("lib-preview")!;
+  const previewBackdrop = previewEl.querySelector<HTMLElement>("[data-preview-backdrop]");
+  const previewCloseBtn = previewEl.querySelector<HTMLButtonElement>("[data-preview-close]");
 
   const previewBodyEl = document.getElementById("lib-preview-body")!;
   const previewTitleEl = document.getElementById("lib-preview-title")!;
 
+  const previewMobileQuery = window.matchMedia("(max-width: 900px)");
+
   function setPreviewOpen(open: boolean) {
-    libraryPage.classList.toggle("library-page--preview-open", open);
+    libraryPage.classList.toggle("library-page--preview-open", open && !previewMobileQuery.matches);
+    document.body.classList.toggle("app-drawer-open", open && previewMobileQuery.matches);
   }
   let statusFilter: "all" | "draft" | "published" = "all";
   let openPreviewId: string | null = null;
@@ -308,8 +314,11 @@ import { withBase } from "../../lib/paths";
     openPreview(id);
   });
 
-  previewEl.addEventListener("click", (e) => {
-    if ((e.target as HTMLElement).closest("[data-preview-close]")) closePreview();
+  previewCloseBtn?.addEventListener("click", closePreview);
+  previewBackdrop?.addEventListener("click", closePreview);
+
+  previewMobileQuery.addEventListener("change", () => {
+    if (openPreviewId) setPreviewOpen(true);
   });
 
   document.addEventListener("keydown", (e) => {
@@ -332,6 +341,14 @@ import { withBase } from "../../lib/paths";
   .library-page--preview-open .library-empty {
     margin-right: var(--lib-preview-w);
     transition: margin-right 0.2s var(--ease);
+  }
+
+  @media (max-width: 900px) {
+    .library-page--preview-open .intro,
+    .library-page--preview-open .library-panel,
+    .library-page--preview-open .library-empty {
+      margin-right: 0;
+    }
   }
 
   .intro {
@@ -567,6 +584,10 @@ import { withBase } from "../../lib/paths";
     pointer-events: none;
   }
 
+  .lib-preview__backdrop {
+    display: none;
+  }
+
   .lib-preview:not([hidden]) {
     pointer-events: auto;
   }
@@ -578,6 +599,31 @@ import { withBase } from "../../lib/paths";
     background: #fff;
     border-left: 1px solid var(--line);
     box-shadow: -10px 0 28px rgba(10, 22, 40, 0.06);
+  }
+
+  @media (max-width: 900px) {
+    .lib-preview {
+      inset: 0;
+      width: auto;
+      z-index: 60;
+    }
+
+    .lib-preview__backdrop {
+      display: block;
+      position: absolute;
+      inset: 0;
+      background: var(--app-drawer-backdrop-bg);
+    }
+
+    .lib-preview__panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+      width: var(--app-drawer-panel-width-right);
+      border-left: none;
+      box-shadow: var(--app-drawer-panel-shadow);
+    }
   }
 
   .lib-preview__head {

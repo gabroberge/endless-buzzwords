@@ -31,9 +31,9 @@ const links = appNavItems.map((item) => ({
   </button>
 </header>
 
-<div class="mobile-nav" id="app-mobile-nav" hidden>
-  <div class="mobile-nav__backdrop" data-mobile-nav-backdrop tabindex="-1" aria-hidden="true"></div>
-  <nav class="mobile-nav__panel" role="dialog" aria-modal="true" aria-label="Workspace navigation">
+<div class="app-drawer app-drawer--left" id="app-mobile-nav" hidden>
+  <div class="app-drawer__backdrop" data-mobile-nav-backdrop tabindex="-1" aria-hidden="true"></div>
+  <nav class="app-drawer__panel mobile-nav__panel" role="dialog" aria-modal="true" aria-label="Workspace navigation">
     <div class="mobile-nav__head">
       <p class="mobile-nav__title">Desk</p>
       <button class="mobile-nav__close" type="button" data-mobile-nav-close>
@@ -78,7 +78,7 @@ const links = appNavItems.map((item) => ({
       open = next;
       menuToggle.setAttribute("aria-expanded", String(next));
       menuDialog.toggleAttribute("hidden", !next);
-      document.body.classList.toggle("app-mobile-nav-open", next);
+      document.body.classList.toggle("app-drawer-open", next);
       if (next) {
         const firstLink = menuPanel.querySelector<HTMLAnchorElement>("a");
         (firstLink ?? closeBtn)?.focus();
@@ -169,35 +169,10 @@ const links = appNavItems.map((item) => ({
     background: currentColor;
   }
 
-  .mobile-nav[hidden] {
-    display: none !important;
-  }
-
-  .mobile-nav {
-    position: fixed;
-    inset: 0;
-    z-index: 60;
-  }
-
-  .mobile-nav__backdrop {
-    position: absolute;
-    inset: 0;
-    background: rgba(10, 22, 40, 0.42);
-  }
-
   .mobile-nav__panel {
-    position: absolute;
-    top: 0;
-    left: 0;
-    display: flex;
-    flex-direction: column;
-    width: min(18.5rem, 86vw);
-    height: 100%;
     padding: 1rem 0.85rem calc(1rem + env(safe-area-inset-bottom, 0px));
     background: var(--ink);
     color: #d7dee8;
-    box-shadow: 0 12px 40px rgba(10, 22, 40, 0.28);
-    outline: none;
   }
 
   .mobile-nav__head {
@@ -272,7 +247,7 @@ const links = appNavItems.map((item) => ({
   }
 
   @media (min-width: 901px) {
-    .mobile-nav {
+    .app-drawer#app-mobile-nav {
       display: none !important;
     }
   }
