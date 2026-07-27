@@ -276,9 +276,11 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   const ws = loadWorkspace();
   formatEl.innerHTML = formats.map((f) => `<option value="${f.id}">${f.label}</option>`).join("");
-  voiceEl.innerHTML = voiceProfiles
-    .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label}</option>`)
-    .join("");
+  voiceEl.innerHTML =
+    `<option value="" disabled ${ws.voiceId ? "" : "selected"}>Select voice</option>` +
+    voiceProfiles
+      .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label}</option>`)
+      .join("");
 
   function engagementLabel(signal: number): string {
     if (signal >= 75) return "High";

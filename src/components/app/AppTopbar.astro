@@ -29,11 +29,15 @@ const { title, eyebrow = "Desk" } = Astro.props;
     const brand = document.querySelector("[data-brand-badge]");
     const authority = document.querySelector("[data-authority-badge]");
     const channels = document.querySelector("[data-channels-badge]");
-    if (brand) brand.textContent = ws.brandName;
+    if (brand) {
+      brand.textContent = ws.brandName.trim() || "Brand not configured";
+      brand.classList.toggle("badge-muted", !ws.brandName.trim());
+    }
     if (authority) authority.textContent = `Authority: ${m.authorityLevel}`;
     if (channels) {
       const n = ws.channels.filter((c) => c.connected).length;
-      channels.textContent = `${n} channels connected`;
+      channels.textContent = n ? `${n} channels connected` : "No channels connected";
+      channels.classList.toggle("badge-muted", n === 0);
     }
   }
 

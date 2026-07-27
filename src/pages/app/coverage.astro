@@ -35,18 +35,27 @@ import AppLayout from "../../layouts/AppLayout.astro";
     return loadWorkspace().focusTopics;
   }
 
-  function loadMap(): CoverageMap {
+  function loadMap(): CoverageMap | null {
     const ws = loadWorkspace();
     if (ws.coverage && isCoverageValid(ws.coverage, ws.focusTopics)) {
       return ws.coverage;
     }
-    return buildCoverage(42, ws.focusTopics);
+    return null;
   }
 
   let current: CoverageMap | null = loadMap();
 
-  function render(map: CoverageMap) {
+  function render(map: CoverageMap | null) {
     current = map;
+    if (!map) {
+      document.getElementById("audience")!.textContent = "Audience";
+      document.getElementById("title")!.textContent = "Topic runway map";
+      document.getElementById("breadth")!.textContent = "Breadth —";
+      document.getElementById("clusters")!.innerHTML =
+        `<p class="muted">Configure focus topics under Brand, then build a coverage map.</p>`;
+      return;
+    }
+
     document.getElementById("audience")!.textContent = `For ${map.audience}`;
     document.getElementById("title")!.textContent = map.title;
     document.getElementById("breadth")!.textContent = `Breadth ${map.breadth}%`;
@@ -64,12 +73,23 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   document.getElementById("build")?.addEventListener("click", () => {
-    render(buildCoverage(Date.now(), focusTopics()));
+    const topics = focusTopics();
+    if (!topics.length) {
+      showToast("Add focus topics under Brand first");
+      render(null);
+      return;
+    }
+    render(buildCoverage(Date.now(), topics));
   });
 
   document.getElementById("rebalance")?.addEventListener("click", () => {
     if (!current) {
-      render(buildCoverage(Date.now(), focusTopics()));
+      const topics = focusTopics();
+      if (!topics.length) {
+        showToast("Add focus topics under Brand first");
+        return;
+      }
+      render(buildCoverage(Date.now(), topics));
     } else {
       render(rebalanceCoverage(current, Date.now()));
     }

@@ -17,7 +17,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
       <label class="field">
         Weekly cadence target
-        <input id="cadence" type="number" min="1" max="21" />
+        <input id="cadence" type="number" min="1" max="21" placeholder="—" />
       </label>
 
       <fieldset class="field-group">
@@ -68,10 +68,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
   function hydrate() {
     const ws = loadWorkspace();
     brandEl.value = ws.brandName;
-    cadenceEl.value = String(ws.cadenceTarget);
-    voiceEl.innerHTML = voiceProfiles
-      .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label} — ${v.description}</option>`)
-      .join("");
+    cadenceEl.value = ws.cadenceTarget != null ? String(ws.cadenceTarget) : "";
+    voiceEl.innerHTML =
+      `<option value="" ${ws.voiceId ? "" : "selected"} disabled hidden>Select a voice</option>` +
+      voiceProfiles
+        .map((v) => `<option value="${v.id}" ${v.id === ws.voiceId ? "selected" : ""}>${v.label} — ${v.description}</option>`)
+        .join("");
     bylineEl.innerHTML = bylineModes
       .map(
         (b) => `
@@ -98,14 +100,17 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   document.getElementById("form")?.addEventListener("submit", (e) => {
     e.preventDefault();
-    const byline = (document.querySelector('input[name="byline"]:checked') as HTMLInputElement | null)?.value ?? "brand";
+    const byline = (document.querySelector('input[name="byline"]:checked') as HTMLInputElement | null)?.value;
     const focusTopics = [...topicsEl.querySelectorAll("input:checked")].map((el) => (el as HTMLInputElement).value);
+    const cadenceRaw = cadenceEl.value.trim();
+    const cadenceParsed = cadenceRaw ? Math.min(21, Math.max(1, Number(cadenceRaw))) : null;
+
     updateWorkspace((s) => ({
       ...s,
-      brandName: brandEl.value.trim() || s.brandName,
-      voiceId: voiceEl.value as any,
-      bylineId: byline as any,
-      cadenceTarget: Math.min(21, Math.max(1, Number(cadenceEl.value) || s.cadenceTarget)),
+      brandName: brandEl.value.trim(),
+      voiceId: voiceEl.value ? (voiceEl.value as typeof s.voiceId) : null,
+      bylineId: byline ? (byline as typeof s.bylineId) : null,
+      cadenceTarget: Number.isFinite(cadenceParsed) ? cadenceParsed : null,
       focusTopics,
     }));
     showToast("Brand settings saved");

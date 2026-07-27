@@ -3,16 +3,19 @@ import { bylineModes } from "./data/voice";
 import { authorityLabel } from "./transforms";
 import { getDraftItems } from "./content-lifecycle";
 
+export type RunwaySeverity = "danger" | "warning" | "healthy" | "unset";
+
 export type RunwayCoverage = {
   coveredSlots: number;
   runwayDays: number;
 };
 
 export type OpsMetrics = {
-  cadenceTarget: number;
+  cadenceTarget: number | null;
   publishedThisWeek: number;
   scheduledAheadDays: number;
   runwaySlots: number;
+  runwaySeverity: RunwaySeverity;
   coverageBreadth: number;
   onMessageAvg: number;
   signalAvg: number;
@@ -25,7 +28,7 @@ export type OpsMetrics = {
   buzzwordsDeployed: number;
   seniorContentRatio: number;
   engagementPotential: "Low" | "Medium" | "High";
-  humanReview: "Required" | "Optional" | "At checkout";
+  humanReview: "Required" | "Optional" | "At checkout" | "—";
 };
 
 function startOfLocalDay(d: Date): Date {
@@ -48,7 +51,11 @@ function expectedSlotDate(from: Date, cadence: number, slotIndex: number): Date 
 }
 
 export function computeRunwayCoverage(ws: Workspace): RunwayCoverage {
-  const cadence = Math.max(1, ws.cadenceTarget);
+  if (ws.cadenceTarget == null || ws.cadenceTarget < 1) {
+    return { coveredSlots: 0, runwayDays: 0 };
+  }
+
+  const cadence = ws.cadenceTarget;
   const today = startOfLocalDay(new Date());
 
   const scheduledDays = new Set(
@@ -75,6 +82,17 @@ export function computeRunwayCoverage(ws: Workspace): RunwayCoverage {
   return { coveredSlots, runwayDays };
 }
 
+export function runwaySeverityFor(ws: Workspace, coverage?: RunwayCoverage): RunwaySeverity {
+  if (ws.cadenceTarget == null || ws.cadenceTarget < 1) return "unset";
+
+  const { coveredSlots, runwayDays } = coverage ?? computeRunwayCoverage(ws);
+  const cadence = ws.cadenceTarget;
+
+  if (coveredSlots === 0) return "danger";
+  if (coveredSlots >= cadence || runwayDays >= 14) return "healthy";
+  return "warning";
+}
+
 export function computeOpsMetrics(ws: Workspace): OpsMetrics {
   const weekAgo = Date.now() - 7 * 86400000;
   const publishedThisWeek = ws.pipeline.filter(
@@ -82,22 +100,24 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
   ).length;
 
   const { coveredSlots, runwayDays } = computeRunwayCoverage(ws);
+  const severity = runwaySeverityFor(ws, { coveredSlots, runwayDays });
 
   const pool = ws.drafts;
   const draftItems = getDraftItems(ws);
-  const onMessageAvg = pool.length
+  const hasContent = pool.length > 0;
+  const onMessageAvg = hasContent
     ? Math.round(pool.reduce((s, d) => s + d.onMessage, 0) / pool.length)
-    : 82;
-  const signalAvg = pool.length ? Math.round(pool.reduce((s, d) => s + d.signal, 0) / pool.length) : 64;
+    : 0;
+  const signalAvg = hasContent ? Math.round(pool.reduce((s, d) => s + d.signal, 0) / pool.length) : 0;
 
   const tierOf = (d: (typeof pool)[number]) => d.authorityTier ?? Math.max(0, (d.seniority ?? 2) - 2);
   const buzzOf = (d: (typeof pool)[number]) => d.buzzwordCount ?? d.buzzwords ?? 0;
 
-  const seniorityAvg = pool.length ? pool.reduce((s, d) => s + tierOf(d), 0) / pool.length : 0;
+  const seniorityAvg = hasContent ? pool.reduce((s, d) => s + tierOf(d), 0) / pool.length : 0;
   const seniorCount = pool.filter((d) => tierOf(d) >= 2).length;
   const buzzwordsDeployed = pool.reduce((s, d) => s + buzzOf(d), 0);
 
-  const seniorContentRatio = pool.length ? Math.round((seniorCount / pool.length) * 100) : 68;
+  const seniorContentRatio = hasContent ? Math.round((seniorCount / pool.length) * 100) : 0;
 
   const byline = bylineModes.find((b) => b.id === ws.bylineId);
 
@@ -106,18 +126,20 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
     publishedThisWeek,
     scheduledAheadDays: runwayDays,
     runwaySlots: coveredSlots,
-    coverageBreadth: ws.coverage?.breadth ?? 61,
+    runwaySeverity: severity,
+    coverageBreadth: ws.coverage?.breadth ?? 0,
     onMessageAvg,
     signalAvg,
     activeChannels: ws.channels.filter((c) => c.connected).length,
     draftsReady: draftItems.length,
-    bylineLabel: byline?.label ?? "Brand account",
+    bylineLabel: byline?.label ?? "—",
     contentRunway: runwayDays >= 14 ? "Unlimited" : `${runwayDays} days`,
-    authorityLevel: authorityLabel(Math.round(seniorityAvg)),
+    authorityLevel: hasContent ? authorityLabel(Math.round(seniorityAvg)) : "—",
     originalThoughts: 0,
     buzzwordsDeployed,
     seniorContentRatio,
-    engagementPotential: signalAvg >= 75 ? "High" : signalAvg >= 60 ? "Medium" : "Low",
-    humanReview: ws.bylineId === "contributor" ? "Optional" : "At checkout",
+    engagementPotential: !hasContent ? "Low" : signalAvg >= 75 ? "High" : signalAvg >= 60 ? "Medium" : "Low",
+    humanReview:
+      ws.bylineId === "contributor" ? "Optional" : ws.bylineId ? "At checkout" : "—",
   };
 }

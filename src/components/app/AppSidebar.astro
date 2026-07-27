@@ -45,11 +45,23 @@ const links = [
 </nav>
 
 <script>
+  import { computeRunwayCoverage } from "../../lib/metrics";
   import { loadWorkspace } from "../../lib/storage";
   function refresh() {
     const ws = loadWorkspace();
+    const { runwayDays, coveredSlots } = computeRunwayCoverage(ws);
     const el = document.querySelector("[data-cadence-note]");
-    if (el) el.textContent = `${ws.cadenceTarget}/week · runway unlimited`;
+    if (!el) return;
+    const cadencePart = ws.cadenceTarget != null ? `${ws.cadenceTarget}/week` : "Cadence not set";
+    const runway =
+      ws.cadenceTarget == null
+        ? "runway —"
+        : coveredSlots === 0
+          ? "no runway"
+          : runwayDays >= 14
+            ? "runway unlimited"
+            : `${runwayDays}d runway`;
+    el.textContent = `${cadencePart} · ${runway}`;
   }
   refresh();
   window.addEventListener("eb:workspace", refresh);

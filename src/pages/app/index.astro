@@ -124,6 +124,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   function runwayValue(m: ReturnType<typeof computeOpsMetrics>): string {
+    if (m.cadenceTarget == null) {
+      return `<span class="pipe-ops__value-main">—</span>`;
+    }
     if (m.contentRunway === "Unlimited") {
       return `<span class="pipe-ops__value-main">∞</span>`;
     }
@@ -132,7 +135,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
     return `<span class="pipe-ops__value-main">${days}</span> <span class="pipe-ops__value-unit">${unit}</span>`;
   }
 
-  function cadenceState(published: number, target: number): "under" | "met" | "over" {
+  function cadenceState(published: number, target: number | null): "under" | "met" | "over" | "unset" {
+    if (target == null) return "unset";
     if (published < target) return "under";
     if (published > target) return "over";
     return "met";
@@ -151,14 +155,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
     if (!ops) return;
 
     const cadence = cadenceState(m.publishedThisWeek, m.cadenceTarget);
-    const runwayClass =
-      m.contentRunway === "Unlimited"
-        ? "pipe-ops__item--runway-ok"
-        : m.scheduledAheadDays <= 2
-          ? "pipe-ops__item--runway-low"
-          : m.scheduledAheadDays <= 6
-            ? "pipe-ops__item--runway-mid"
-            : "pipe-ops__item--runway-ok";
+    const runwayClass = `pipe-ops__item--runway-${m.runwaySeverity}`;
 
     ops.innerHTML = `
       <div class="pipe-ops__real">
@@ -166,7 +163,9 @@ import AppLayout from "../../layouts/AppLayout.astro";
         ${opsItem("Runway", runwayValue(m), `pipe-ops__item--runway ${runwayClass}`)}
         ${opsItem(
           "Published this week",
-          `<span class="pipe-ops__value-main">${m.publishedThisWeek}</span><span class="pipe-ops__value-sep">/</span><span class="pipe-ops__value-sub">${m.cadenceTarget}</span>`,
+          m.cadenceTarget != null
+            ? `<span class="pipe-ops__value-main">${m.publishedThisWeek}</span><span class="pipe-ops__value-sep">/</span><span class="pipe-ops__value-sub">${m.cadenceTarget}</span>`
+            : `<span class="pipe-ops__value-main">—</span>`,
           `pipe-ops__item--cadence pipe-ops__item--cadence-${cadence}`,
         )}
       </div>
@@ -603,16 +602,34 @@ import AppLayout from "../../layouts/AppLayout.astro";
     letter-spacing: 0.03em;
   }
 
-  .pipe-ops :global(.pipe-ops__item--runway .pipe-ops__value) {
-    color: var(--accent-hover);
+  .pipe-ops :global(.pipe-ops__item--runway-unset .pipe-ops__value),
+  .pipe-ops :global(.pipe-ops__item--runway-unset .pipe-ops__label) {
+    color: var(--ink-muted);
   }
 
-  .pipe-ops :global(.pipe-ops__item--runway-low .pipe-ops__value) {
+  .pipe-ops :global(.pipe-ops__item--cadence-unset .pipe-ops__value-main) {
+    color: var(--ink-muted);
+  }
+
+  .pipe-ops :global(.pipe-ops__item--runway-danger .pipe-ops__value),
+  .pipe-ops :global(.pipe-ops__item--runway-danger .pipe-ops__label) {
+    color: var(--danger);
+  }
+
+  .pipe-ops :global(.pipe-ops__item--runway-warning .pipe-ops__value) {
     color: var(--warm);
   }
 
-  .pipe-ops :global(.pipe-ops__item--runway-low .pipe-ops__label) {
+  .pipe-ops :global(.pipe-ops__item--runway-warning .pipe-ops__label) {
     color: #9a6a28;
+  }
+
+  .pipe-ops :global(.pipe-ops__item--runway-healthy .pipe-ops__value) {
+    color: var(--success);
+  }
+
+  .pipe-ops :global(.pipe-ops__item--runway-healthy .pipe-ops__label) {
+    color: var(--accent-hover);
   }
 
   .pipe-ops :global(.pipe-ops__item--cadence-under .pipe-ops__value-main) {

@@ -1,5 +1,5 @@
 import type { BylineId, VoiceId } from "./data/voice";
-import { composeDraft, type Draft } from "./content-engine";
+import type { Draft } from "./content-engine";
 import { normalizeWorkspace } from "./content-lifecycle";
 import type { CoverageMap } from "./coverage-engine";
 
@@ -23,9 +23,9 @@ export type PipelineItem = {
 export type Workspace = {
   version: 2;
   brandName: string;
-  voiceId: VoiceId;
-  bylineId: BylineId;
-  cadenceTarget: number;
+  voiceId: VoiceId | null;
+  bylineId: BylineId | null;
+  cadenceTarget: number | null;
   focusTopics: string[];
   channels: Channel[];
   drafts: Draft[];
@@ -36,85 +36,55 @@ export type Workspace = {
 
 const KEY = "endless-buzzwords.workspace.v2";
 
-export const defaultChannels: Channel[] = [
-  { id: "linkedin", label: "LinkedIn", connected: true },
-  { id: "x", label: "X", connected: true },
+/** Available platforms — all disconnected until the user connects them. */
+export const platformChannels: Channel[] = [
+  { id: "linkedin", label: "LinkedIn", connected: false },
+  { id: "x", label: "X", connected: false },
   { id: "youtube", label: "YouTube", connected: false },
   { id: "facebook", label: "Facebook", connected: false },
 ];
 
-function seedDrafts(): Draft[] {
-  const specs = [
-    { id: "seed1", title: "Field note · API design", topicId: "apis", formatId: "field-note" as const, seed: 1001 },
-    { id: "seed2", title: "Sync vs async for exports", topicId: "apis", formatId: "quick-take" as const, seed: 1002 },
-    { id: "seed3", title: "Debug prompt · worker lag", topicId: "system-design", formatId: "debug-prompt" as const, seed: 1003 },
-    { id: "seed4", title: "60-second script · caching", topicId: "caching", formatId: "short-script" as const, seed: 1004 },
-  ];
+/** @deprecated Use platformChannels */
+export const defaultChannels = platformChannels;
 
-  return specs.map((spec) => {
-    const draft = composeDraft({
-      topicId: spec.topicId,
-      formatId: spec.formatId,
-      voiceId: "desk",
-      seed: spec.seed,
-    });
-    return { ...draft, id: spec.id, title: spec.title };
-  });
-}
-
-function seedPipeline(): PipelineItem[] {
-  const now = Date.now();
-  const day = 86400000;
-  return [
-    {
-      id: "p1",
-      draftId: "seed1",
-      title: "Field note · API design",
-      channelId: "linkedin",
-      when: new Date(now + day).toISOString(),
-      status: "scheduled",
-    },
-    {
-      id: "p2",
-      draftId: "seed2",
-      title: "Sync vs async for exports",
-      channelId: "x",
-      when: new Date(now + day).toISOString(),
-      status: "scheduled",
-    },
-    {
-      id: "p3",
-      draftId: "seed3",
-      title: "Debug prompt · worker lag",
-      channelId: "linkedin",
-      when: new Date(now + day * 2).toISOString(),
-      status: "scheduled",
-    },
-    {
-      id: "p4",
-      draftId: "seed4",
-      title: "60-second script · caching",
-      channelId: "youtube",
-      when: "",
-      status: "queued",
-    },
-  ];
+export function isBrandConfigured(ws: Workspace): boolean {
+  return Boolean(
+    ws.brandName.trim() ||
+      ws.cadenceTarget != null ||
+      ws.voiceId ||
+      ws.bylineId ||
+      ws.focusTopics.length > 0,
+  );
 }
 
 export function createWorkspace(): Workspace {
   return normalizeWorkspace({
     version: 2,
-    brandName: "North Desk",
-    voiceId: "desk",
-    bylineId: "brand",
-    cadenceTarget: 5,
-    focusTopics: ["apis", "system-design", "caching", "react"],
-    channels: structuredClone(defaultChannels),
-    drafts: seedDrafts(),
+    brandName: "",
+    voiceId: null,
+    bylineId: null,
+    cadenceTarget: null,
+    focusTopics: [],
+    channels: structuredClone(platformChannels),
+    drafts: [],
     published: [],
-    pipeline: seedPipeline(),
+    pipeline: [],
     coverage: null,
   });
+}
+
+function mergeWorkspace(base: Workspace, saved: Partial<Workspace>): Workspace {
+  return {
+    ...base,
+    ...saved,
+    version: 2,
+    channels: saved.channels?.length ? saved.channels : base.channels,
+    drafts: saved.drafts ?? base.drafts,
+    published: saved.published ?? base.published,
+    pipeline: saved.pipeline ?? base.pipeline,
+    focusTopics: saved.focusTopics ?? base.focusTopics,
+    coverage: saved.coverage ?? base.coverage,
+  };
 }
 
 export function loadWorkspace(): Workspace {
@@ -122,16 +92,15 @@ export function loadWorkspace(): Workspace {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) {
-      // migrate away from v1 silently
       localStorage.removeItem("endless-buzzwords.workspace.v1");
       return createWorkspace();
     }
-    const parsed = JSON.parse(raw) as Workspace;
+    const parsed = JSON.parse(raw) as Partial<Workspace>;
     if (parsed?.version !== 2) {
       localStorage.removeItem("endless-buzzwords.workspace.v1");
       return createWorkspace();
     }
-    return normalizeWorkspace({ ...createWorkspace(), ...parsed, channels: parsed.channels?.length ? parsed.channels : defaultChannels });
+    return normalizeWorkspace(mergeWorkspace(createWorkspace(), parsed));
   } catch {
     return createWorkspace();
   }
