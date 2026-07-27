@@ -1,14 +1,16 @@
 ---
+import { withBase } from "../../lib/paths";
+
 const links = [
-  { href: "/#thesis", label: "Why" },
-  { href: "/#product", label: "Product" },
-  { href: "/#plans", label: "Plans" },
+  { href: withBase("/#thesis"), label: "Why" },
+  { href: withBase("/#product"), label: "Product" },
+  { href: withBase("/#plans"), label: "Plans" },
 ];
 ---
 
 <header class="m-header">
   <div class="container-wide m-header__inner">
-    <a class="brand" href="/" aria-label="Endless Buzzwords home">
+    <a class="brand" href={withBase("/")} aria-label="Endless Buzzwords home">
       <span class="brand__mark" aria-hidden="true"></span>
       <span class="brand__text">
         <span class="brand__name">Endless Buzzwords</span>
@@ -21,8 +23,8 @@ const links = [
     </nav>
 
     <div class="m-actions">
-      <a class="btn btn-ghost btn-sm" href="/app">Open desk</a>
-      <a class="btn btn-primary btn-sm" href="/app/compose">Start composing</a>
+      <a class="btn btn-ghost btn-sm" href={withBase("/app")}>Open desk</a>
+      <a class="btn btn-primary btn-sm" href={withBase("/app/compose")}>Start composing</a>
     </div>
 
     <button class="m-menu" type="button" aria-expanded="false" aria-controls="mobile-nav" data-menu-toggle>
@@ -34,8 +36,8 @@ const links = [
   <div id="mobile-nav" class="m-mobile" hidden>
     <nav aria-label="Mobile">
       {links.map((l) => <a href={l.href}>{l.label}</a>)}
-      <a href="/app">Open desk</a>
-      <a class="btn btn-primary" href="/app/compose">Start composing</a>
+      <a href={withBase("/app")}>Open desk</a>
+      <a class="btn btn-primary" href={withBase("/app/compose")}>Start composing</a>
     </nav>
   </div>
 </header>

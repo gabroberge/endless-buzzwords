@@ -1,18 +1,20 @@
 ---
-const pathname = Astro.url.pathname;
+import { stripBase, withBase } from "../../lib/paths";
+
+const pathname = stripBase(Astro.url.pathname);
 
 const links = [
-  { href: "/app", label: "Pipeline", match: /^\/app\/?$/ },
-  { href: "/app/compose", label: "Compose", match: /^\/app\/compose/ },
-  { href: "/app/library", label: "Library", match: /^\/app\/library/ },
-  { href: "/app/coverage", label: "Coverage", match: /^\/app\/coverage/ },
-  { href: "/app/channels", label: "Channels", match: /^\/app\/channels/ },
-  { href: "/app/brand", label: "Brand", match: /^\/app\/brand/ },
+  { href: withBase("/app"), label: "Pipeline", match: /^\/app\/?$/ },
+  { href: withBase("/app/compose"), label: "Compose", match: /^\/app\/compose/ },
+  { href: withBase("/app/library"), label: "Library", match: /^\/app\/library/ },
+  { href: withBase("/app/coverage"), label: "Coverage", match: /^\/app\/coverage/ },
+  { href: withBase("/app/channels"), label: "Channels", match: /^\/app\/channels/ },
+  { href: withBase("/app/brand"), label: "Brand", match: /^\/app\/brand/ },
 ];
 ---
 
 <aside class="sidebar" aria-label="Workspace">
-  <a class="sidebar__brand" href="/">
+  <a class="sidebar__brand" href={withBase("/")}>
     <span class="mark" aria-hidden="true"></span>
     <span>
       <strong>Endless Buzzwords</strong>
@@ -31,17 +33,17 @@ const links = [
   </nav>
 
   <div class="sidebar__footer">
-    <a href="/">Product site</a>
+    <a href={withBase("/")}>Product site</a>
     <p class="muted" data-cadence-note>Cadence target loading…</p>
   </div>
 </aside>
 
 <nav class="mobile-tabbar" aria-label="Workspace mobile">
-  <a href="/app" class:list={[{ active: /^\/app\/?$/.test(pathname) }]}>Pipe</a>
-  <a href="/app/compose" class:list={[{ active: pathname.includes("/compose") }]}>Compose</a>
-  <a href="/app/coverage" class:list={[{ active: pathname.includes("/coverage") }]}>Cover</a>
-  <a href="/app/channels" class:list={[{ active: pathname.includes("/channels") }]}>Send</a>
-  <a href="/app/brand" class:list={[{ active: pathname.includes("/brand") }]}>Brand</a>
+  <a href={withBase("/app")} class:list={[{ active: /^\/app\/?$/.test(pathname) }]}>Pipe</a>
+  <a href={withBase("/app/compose")} class:list={[{ active: pathname.includes("/compose") }]}>Compose</a>
+  <a href={withBase("/app/coverage")} class:list={[{ active: pathname.includes("/coverage") }]}>Cover</a>
+  <a href={withBase("/app/channels")} class:list={[{ active: pathname.includes("/channels") }]}>Send</a>
+  <a href={withBase("/app/brand")} class:list={[{ active: pathname.includes("/brand") }]}>Brand</a>
 </nav>
 
 <script>
