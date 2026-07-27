@@ -4,7 +4,7 @@ import { withBase } from "../../lib/paths";
 ---
 
 <AppLayout title="Library" eyebrow="Archive">
-  <section class="library-page">
+  <section class="library-page" id="library-page">
     <div class="card intro">
       <div class="intro__copy">
         <h2>Your content library</h2>
@@ -34,6 +34,25 @@ import { withBase } from "../../lib/paths";
       <ul id="library-list" class="lib-list" aria-label="Content library"></ul>
       <p class="library-no-matches muted" id="no-matches" hidden>No pieces match your filters.</p>
     </section>
+
+    <aside class="lib-preview" id="lib-preview" hidden aria-label="Preview">
+      <div class="lib-preview__panel">
+        <header class="lib-preview__head">
+          <span class="lib-preview__label">Preview</span>
+          <button class="lib-preview__close" type="button" data-preview-close aria-label="Close preview">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+            </svg>
+          </button>
+        </header>
+        <div class="lib-preview__scroll">
+          <div class="lib-preview__reading">
+            <h2 class="lib-preview__title" id="lib-preview-title"></h2>
+            <pre class="lib-preview__body" id="lib-preview-body"></pre>
+          </div>
+        </div>
+      </div>
+    </aside>
 
     <div class="card library-empty" id="library-empty" hidden>
       <p class="library-empty__title">Your library is empty</p>
@@ -78,8 +97,25 @@ import { withBase } from "../../lib/paths";
   const libraryEmpty = document.getElementById("library-empty")!;
   const libraryList = document.getElementById("library-list")!;
   const noMatchesEl = document.getElementById("no-matches")!;
+  const libraryPage = document.getElementById("library-page")!;
+  const previewEl = document.getElementById("lib-preview")!;
 
+  const previewBodyEl = document.getElementById("lib-preview-body")!;
+  const previewTitleEl = document.getElementById("lib-preview-title")!;
+
+  function setPreviewOpen(open: boolean) {
+    libraryPage.classList.toggle("library-page--preview-open", open);
+  }
   let statusFilter: "all" | "draft" | "published" = "all";
+  let openPreviewId: string | null = null;
+
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 
   function metaParts(parts: string[]): string {
     return parts
@@ -110,16 +146,57 @@ import { withBase } from "../../lib/paths";
     const meta = metaParts([topic, format, channel, voice, formatDate(draft.createdAt)]);
 
     return `
-      <li class="lib-row">
+      <li class="lib-row" data-inspect="${draft.id}">
         <div class="lib-row__main">
           <div class="lib-row__head">
             <span class="lib-row__badge lib-row__badge--${status}">${status === "published" ? "Published" : "Draft"}</span>
-            <h4 class="lib-row__title">${draft.title}</h4>
+            <h4 class="lib-row__title">${escapeHtml(draft.title)}</h4>
           </div>
           <p class="lib-row__meta">${meta}</p>
         </div>
         ${rowAction(ws, draft)}
       </li>`;
+  }
+
+  function setPreviewContent(draft: Draft) {
+    previewTitleEl.textContent = draft.title;
+    previewBodyEl.textContent = draft.body;
+  }
+
+  function openPreview(id: string) {
+    const draft = findContent(loadWorkspace(), id);
+    if (!draft) return;
+
+    openPreviewId = id;
+    setPreviewContent(draft);
+    previewEl.hidden = false;
+    setPreviewOpen(true);
+    previewEl.querySelector(".lib-preview__scroll")?.scrollTo(0, 0);
+
+    document.querySelectorAll("[data-inspect]").forEach((row) => {
+      row.classList.toggle("lib-row--previewing", (row as HTMLElement).dataset.inspect === id);
+    });
+  }
+
+  function closePreview() {
+    openPreviewId = null;
+    previewEl.hidden = true;
+    previewTitleEl.textContent = "";
+    previewBodyEl.textContent = "";
+    setPreviewOpen(false);
+    document.querySelectorAll(".lib-row--previewing").forEach((row) => {
+      row.classList.remove("lib-row--previewing");
+    });
+  }
+
+  function refreshPreview() {
+    if (!openPreviewId) return;
+    const draft = findContent(loadWorkspace(), openPreviewId);
+    if (!draft) {
+      closePreview();
+      return;
+    }
+    setPreviewContent(draft);
   }
 
   function queueItem(draft: Draft) {
@@ -200,6 +277,7 @@ import { withBase } from "../../lib/paths";
     libraryList.innerHTML = visible.map((item) => contentRow(ws, item)).join("");
     noMatchesEl.hidden = visible.length > 0;
     libraryList.hidden = visible.length === 0;
+    refreshPreview();
   }
 
   searchEl.addEventListener("input", render);
@@ -213,13 +291,29 @@ import { withBase } from "../../lib/paths";
   });
 
   libraryList.addEventListener("click", (e) => {
-    const btn = (e.target as HTMLElement).closest("[data-queue]") as HTMLElement | null;
-    if (!btn) return;
-    const id = btn.dataset.queue;
+    const queueBtn = (e.target as HTMLElement).closest("[data-queue]") as HTMLElement | null;
+    if (queueBtn) {
+      const id = queueBtn.dataset.queue;
+      if (!id) return;
+      const draft = findContent(loadWorkspace(), id);
+      if (!draft) return;
+      queueItem(draft);
+      return;
+    }
+
+    const row = (e.target as HTMLElement).closest("[data-inspect]") as HTMLElement | null;
+    if (!row) return;
+    const id = row.dataset.inspect;
     if (!id) return;
-    const draft = findContent(loadWorkspace(), id);
-    if (!draft) return;
-    queueItem(draft);
+    openPreview(id);
+  });
+
+  previewEl.addEventListener("click", (e) => {
+    if ((e.target as HTMLElement).closest("[data-preview-close]")) closePreview();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && openPreviewId) closePreview();
   });
 
   render();
@@ -230,6 +324,14 @@ import { withBase } from "../../lib/paths";
   .library-page {
     display: grid;
     gap: 1rem;
+    --lib-preview-w: clamp(26.25rem, 32vw, 30rem);
+  }
+
+  .library-page--preview-open .intro,
+  .library-page--preview-open .library-panel,
+  .library-page--preview-open .library-empty {
+    margin-right: var(--lib-preview-w);
+    transition: margin-right 0.2s var(--ease);
   }
 
   .intro {
@@ -262,7 +364,8 @@ import { withBase } from "../../lib/paths";
   .library-panel[hidden],
   .library-empty[hidden],
   .library-no-matches[hidden],
-  .lib-list[hidden] {
+  .lib-list[hidden],
+  .lib-preview[hidden] {
     display: none !important;
   }
 
@@ -368,6 +471,7 @@ import { withBase } from "../../lib/paths";
     padding: 0.72rem 1rem;
     border-bottom: 1px solid var(--line);
     transition: background 0.18s var(--ease);
+    cursor: pointer;
   }
 
   .lib-list :global(.lib-row:last-child) {
@@ -441,8 +545,122 @@ import { withBase } from "../../lib/paths";
     user-select: none;
   }
 
+  .lib-list :global(.lib-row--previewing) {
+    background: rgba(12, 143, 124, 0.06);
+  }
+
   .lib-list :global(.lib-row__action) {
     flex-shrink: 0;
+  }
+
+  .lib-list :global(.lib-row__action button) {
+    cursor: pointer;
+  }
+
+  .lib-preview {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: var(--lib-preview-w);
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  .lib-preview:not([hidden]) {
+    pointer-events: auto;
+  }
+
+  .lib-preview__panel {
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    background: #fff;
+    border-left: 1px solid var(--line);
+    box-shadow: -10px 0 28px rgba(10, 22, 40, 0.06);
+  }
+
+  .lib-preview__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.8rem 1.75rem;
+    border-bottom: 1px solid var(--line);
+    background: #fff;
+  }
+
+  .lib-preview__label {
+    font-size: 0.74rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .lib-preview__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      color 0.15s var(--ease),
+      border-color 0.15s var(--ease),
+      background 0.15s var(--ease);
+  }
+
+  .lib-preview__close:hover {
+    color: var(--ink);
+    border-color: var(--line-strong);
+    background: #f8fafc;
+  }
+
+  .lib-preview__scroll {
+    overflow-y: auto;
+    min-height: 0;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(10, 22, 40, 0.2) transparent;
+  }
+
+  .lib-preview__scroll::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .lib-preview__scroll::-webkit-scrollbar-thumb {
+    background: rgba(10, 22, 40, 0.18);
+    border-radius: 999px;
+  }
+
+  .lib-preview__reading {
+    padding: 1.75rem 2rem 2rem;
+  }
+
+  .lib-preview__title {
+    font-family: var(--font-body);
+    font-size: 1.15rem;
+    font-weight: 750;
+    margin: 0 0 0.75rem;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    color: var(--ink);
+  }
+
+  .lib-preview__body {
+    margin: 0;
+    padding: 0;
+    white-space: pre-wrap;
+    font-family: var(--font-mono);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .lib-list :global(.lib-row__status) {
