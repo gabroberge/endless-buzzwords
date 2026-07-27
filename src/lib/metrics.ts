@@ -3,10 +3,16 @@ import { bylineModes } from "./data/voice";
 import { authorityLabel } from "./transforms";
 import { getDraftItems } from "./content-lifecycle";
 
+export type RunwayCoverage = {
+  coveredSlots: number;
+  runwayDays: number;
+};
+
 export type OpsMetrics = {
   cadenceTarget: number;
   publishedThisWeek: number;
   scheduledAheadDays: number;
+  runwaySlots: number;
   coverageBreadth: number;
   onMessageAvg: number;
   signalAvg: number;
@@ -22,18 +28,60 @@ export type OpsMetrics = {
   humanReview: "Required" | "Optional" | "At checkout";
 };
 
+function startOfLocalDay(d: Date): Date {
+  const day = new Date(d);
+  day.setHours(0, 0, 0, 0);
+  return day;
+}
+
+function addLocalDays(d: Date, days: number): Date {
+  const next = new Date(d);
+  next.setDate(next.getDate() + days);
+  return startOfLocalDay(next);
+}
+
+function expectedSlotDate(from: Date, cadence: number, slotIndex: number): Date {
+  const weekIndex = Math.floor(slotIndex / cadence);
+  const slotInWeek = slotIndex % cadence;
+  const dayOffset = weekIndex * 7 + Math.floor((slotInWeek * 7) / cadence);
+  return addLocalDays(from, dayOffset);
+}
+
+export function computeRunwayCoverage(ws: Workspace): RunwayCoverage {
+  const cadence = Math.max(1, ws.cadenceTarget);
+  const today = startOfLocalDay(new Date());
+
+  const scheduledDays = new Set(
+    ws.pipeline
+      .filter((p) => p.status === "scheduled" && p.when)
+      .map((p) => startOfLocalDay(new Date(p.when)).getTime()),
+  );
+
+  let coveredSlots = 0;
+  let lastCoveredDate = today;
+  const maxSlots = cadence * 12;
+
+  for (let slotIndex = 0; slotIndex < maxSlots; slotIndex++) {
+    const slotDate = expectedSlotDate(today, cadence, slotIndex);
+    if (!scheduledDays.has(slotDate.getTime())) break;
+
+    coveredSlots++;
+    lastCoveredDate = slotDate;
+  }
+
+  const runwayDays =
+    coveredSlots === 0 ? 0 : Math.round((lastCoveredDate.getTime() - today.getTime()) / 86400000);
+
+  return { coveredSlots, runwayDays };
+}
+
 export function computeOpsMetrics(ws: Workspace): OpsMetrics {
   const weekAgo = Date.now() - 7 * 86400000;
   const publishedThisWeek = ws.pipeline.filter(
     (p) => p.status === "published" && new Date(p.when).getTime() >= weekAgo,
   ).length;
 
-  const upcoming = ws.pipeline
-    .filter((p) => p.status === "scheduled" && p.when)
-    .map((p) => new Date(p.when).getTime())
-    .sort((a, b) => b - a);
-  const farthest = upcoming[0] ?? Date.now();
-  const scheduledAheadDays = Math.max(0, Math.round((farthest - Date.now()) / 86400000));
+  const { coveredSlots, runwayDays } = computeRunwayCoverage(ws);
 
   const pool = ws.drafts;
   const draftItems = getDraftItems(ws);
@@ -56,14 +104,15 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
   return {
     cadenceTarget: ws.cadenceTarget,
     publishedThisWeek,
-    scheduledAheadDays,
+    scheduledAheadDays: runwayDays,
+    runwaySlots: coveredSlots,
     coverageBreadth: ws.coverage?.breadth ?? 61,
     onMessageAvg,
     signalAvg,
     activeChannels: ws.channels.filter((c) => c.connected).length,
     draftsReady: draftItems.length,
     bylineLabel: byline?.label ?? "Brand account",
-    contentRunway: scheduledAheadDays >= 14 ? "Unlimited" : `${scheduledAheadDays} days`,
+    contentRunway: runwayDays >= 14 ? "Unlimited" : `${runwayDays} days`,
     authorityLevel: authorityLabel(Math.round(seniorityAvg)),
     originalThoughts: 0,
     buzzwordsDeployed,
