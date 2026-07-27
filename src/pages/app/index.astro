@@ -48,9 +48,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
                     <button class="btn btn-ghost btn-sm" type="button" id="schedule-form-back">Back</button>
                     <button class="btn btn-accent btn-sm" type="button" id="schedule-form-submit">Schedule</button>
                   </div>
-                  <button class="btn btn-ghost btn-sm schedule-form__queue" type="button" id="schedule-form-queue">
-                    Add to queue without date
-                  </button>
                 </div>
               </div>
             </div>
@@ -107,7 +104,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
   const scheduleFormDate = document.getElementById("schedule-form-date") as HTMLInputElement;
   const scheduleFormBack = document.getElementById("schedule-form-back")!;
   const scheduleFormSubmit = document.getElementById("schedule-form-submit")!;
-  const scheduleFormQueue = document.getElementById("schedule-form-queue")!;
   const upcomingEl = document.getElementById("upcoming")!;
   const upcomingEmpty = document.getElementById("upcoming-empty")!;
 
@@ -212,7 +208,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     }
 
     scheduleFormDate.value = item?.when ? toDateInputValue(item.when) : defaultScheduleDateInput(1);
-    scheduleFormQueue.hidden = Boolean(pipelineId && item?.status === "scheduled");
 
     scheduleListView.hidden = true;
     scheduleFormView.hidden = false;
@@ -242,15 +237,14 @@ import AppLayout from "../../layouts/AppLayout.astro";
     const format = formatById[draft.formatId] ?? draft.formatId.replaceAll("-", " ");
 
     return `
-      <li class="pick-row">
-        <div class="pick-row__main">
+      <li>
+        <button class="pick-row" type="button" data-pick="${draft.id}">
           <span class="pick-row__badge pick-row__badge--${status}">${status === "published" ? "Published" : "Draft"}</span>
-          <div class="pick-row__copy">
+          <span class="pick-row__copy">
             <span class="pick-row__title">${draft.title}</span>
             <span class="pick-row__meta">${metaParts([topic, format])}</span>
-          </div>
-        </div>
-        <button class="btn btn-ghost btn-sm" type="button" data-pick="${draft.id}">Schedule</button>
+          </span>
+        </button>
       </li>`;
   }
 
@@ -378,33 +372,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     window.dispatchEvent(new Event("eb:workspace"));
   }
 
-  function submitQueueWithoutDate() {
-    const ws = loadWorkspace();
-    const channelId = scheduleFormChannel.value as ChannelId;
-
-    if (!channelId || !isChannelConnected(ws, channelId)) {
-      showToast("Choose a connected channel");
-      return;
-    }
-
-    if (schedulePipelineId) return;
-
-    const draft = scheduleDraftId ? findContent(ws, scheduleDraftId) : null;
-    if (!draft) return;
-
-    updateWorkspace((s) =>
-      queueContent(s, draft, {
-        channelId,
-        when: null,
-        status: "queued",
-      }),
-    );
-    showToast("Added to queue");
-    closeSchedulePanel();
-    render();
-    window.dispatchEvent(new Event("eb:workspace"));
-  }
-
   function render() {
     const ws = loadWorkspace();
     const m = computeOpsMetrics(ws);
@@ -451,11 +418,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
   scheduleFormSubmit.addEventListener("click", (e) => {
     e.stopPropagation();
     submitScheduleForm();
-  });
-
-  scheduleFormQueue.addEventListener("click", (e) => {
-    e.stopPropagation();
-    submitQueueWithoutDate();
   });
 
   upcomingEl.addEventListener("click", (e) => {
@@ -748,18 +710,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     margin-top: 0.15rem;
   }
 
-  .schedule-form__queue {
-    justify-self: start;
-    margin-top: -0.15rem;
-    font-size: 0.78rem !important;
-    min-height: 32px !important;
-    padding-inline: 0.5rem !important;
-  }
-
-  .schedule-form__queue[hidden] {
-    display: none !important;
-  }
-
   .schedule-panel__label {
     margin: 0 0 0.45rem;
     padding: 0 0.35rem;
@@ -812,27 +762,38 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   .schedule-list :global(.pick-row) {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.65rem;
+    align-items: flex-start;
+    gap: 0.5rem;
+    width: 100%;
     padding: 0.5rem 0.35rem;
+    border: none;
     border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: background 0.15s var(--ease);
   }
 
-  .schedule-list :global(.pick-row:last-child) {
+  .schedule-list :global(li:last-child .pick-row) {
     border-bottom: none;
   }
 
-  .schedule-list :global(.pick-row__main) {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.5rem;
-    min-width: 0;
-    flex: 1;
+  .schedule-list :global(.pick-row:hover) {
+    background: rgba(10, 22, 40, 0.03);
+  }
+
+  .schedule-list :global(.pick-row:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+    background: rgba(12, 143, 124, 0.05);
   }
 
   .schedule-list :global(.pick-row__copy) {
     min-width: 0;
+    flex: 1;
     display: grid;
     gap: 0.12rem;
   }
