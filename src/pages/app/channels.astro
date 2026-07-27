@@ -21,33 +21,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import { loadWorkspace, updateWorkspace, type ChannelId } from "../../lib/storage";
-import { showToast } from "../../lib/ui";
-
-  const channelMeta: Record<
-    ChannelId,
-    { monogram: string; mark: string; desc: string }
-  > = {
-    linkedin: {
-      monogram: "in",
-      mark: "#0a66c2",
-      desc: "Ready for maximum professional authority extraction.",
-    },
-    x: {
-      monogram: "X",
-      mark: "#101828",
-      desc: "Optimized for compressed certainty and unsolicited takes.",
-    },
-    youtube: {
-      monogram: "▶",
-      mark: "#cc0000",
-      desc: "Convert one thought into several minutes of watch time.",
-    },
-    facebook: {
-      monogram: "f",
-      mark: "#1877f2",
-      desc: "Extend technical authority into comment sections worldwide.",
-    },
-  };
+  import { channelMeta } from "../../lib/data/channels";
+  import { showToast } from "../../lib/ui";
 
   function render() {
     const ws = loadWorkspace();

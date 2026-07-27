@@ -66,10 +66,10 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import { formats } from "../../lib/data/formats";
+  import { channelMarkHtml } from "../../lib/data/channels";
   import { topicById } from "../../lib/data/topics";
   import { voiceProfiles } from "../../lib/data/voice";
   import {
-    channelLabelForItem,
     findContent,
     getAvailableForPipeline,
     getConnectedChannels,
@@ -138,6 +138,14 @@ import AppLayout from "../../layouts/AppLayout.astro";
     return "met";
   }
 
+  function opsItem(label: string, value: string, extraClass = ""): string {
+    return `
+      <div class="pipe-ops__item ${extraClass}">
+        <span class="pipe-ops__label">${label}</span>
+        <span class="pipe-ops__value">${value}</span>
+      </div>`;
+  }
+
   function renderOpsSummary(m: ReturnType<typeof computeOpsMetrics>, upcomingCount: number) {
     const ops = document.getElementById("pipe-ops");
     if (!ops) return;
@@ -153,21 +161,19 @@ import AppLayout from "../../layouts/AppLayout.astro";
             : "pipe-ops__item--runway-ok";
 
     ops.innerHTML = `
-      <div class="pipe-ops__item">
-        <span class="pipe-ops__value">${upcomingCount}</span>
-        <span class="pipe-ops__label">Upcoming</span>
+      <div class="pipe-ops__real">
+        ${opsItem("Upcoming", String(upcomingCount))}
+        ${opsItem("Runway", runwayValue(m), `pipe-ops__item--runway ${runwayClass}`)}
+        ${opsItem(
+          "Published this week",
+          `<span class="pipe-ops__value-main">${m.publishedThisWeek}</span><span class="pipe-ops__value-sep">/</span><span class="pipe-ops__value-sub">${m.cadenceTarget}</span>`,
+          `pipe-ops__item--cadence pipe-ops__item--cadence-${cadence}`,
+        )}
       </div>
-      <div class="pipe-ops__item pipe-ops__item--runway ${runwayClass}">
-        <span class="pipe-ops__value">${runwayValue(m)}</span>
-        <span class="pipe-ops__label">Runway</span>
-      </div>
-      <div class="pipe-ops__item pipe-ops__item--cadence pipe-ops__item--cadence-${cadence}">
-        <span class="pipe-ops__value">
-          <span class="pipe-ops__value-main">${m.publishedThisWeek}</span>
-          <span class="pipe-ops__value-sep">/</span>
-          <span class="pipe-ops__value-sub">${m.cadenceTarget}</span>
-        </span>
-        <span class="pipe-ops__label">Published this week</span>
+      <div class="pipe-ops__satire">
+        ${opsItem("Authority", m.authorityLevel, "pipe-ops__item--satire")}
+        ${opsItem("Original thoughts", String(m.originalThoughts), "pipe-ops__item--satire")}
+        ${opsItem("Human review", m.humanReview, "pipe-ops__item--satire")}
       </div>`;
   }
 
@@ -259,9 +265,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     const voice = content ? voiceById[content.voiceId] ?? content.voiceId : "";
     const isQueued = item.status === "queued";
     const channelConnected = isChannelConnected(ws, item.channelId);
-    const channelLabel = channelLabelForItem(ws, item.channelId);
-    const channelClass = channelConnected ? "up-row__channel" : "up-row__channel up-row__channel--offline";
-    const channelText = channelConnected ? channelLabel : `${channelLabel} (offline)`;
     const dateLabel = isQueued ? "No date" : formatDay(item.when);
     const rowClass = [
       "up-row",
@@ -273,16 +276,18 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
     return `
       <li class="${rowClass}">
-        <div class="up-row__main">
-          <div class="up-row__head">
-            ${isNext ? '<span class="up-row__next">Next</span>' : ""}
-            <span class="up-row__date">${dateLabel}</span>
-            <span class="up-row__badge up-row__badge--${item.status}">${pipelineStatusLabel(item.status)}</span>
-            <span class="${channelClass}">${channelText}</span>
+        <div class="up-row__body">
+          ${channelMarkHtml(item.channelId, { className: "up-row__mark", offline: !channelConnected })}
+          <div class="up-row__main">
+            <div class="up-row__head">
+              ${isNext ? '<span class="up-row__next">Next</span>' : ""}
+              <span class="up-row__date">${dateLabel}</span>
+              <span class="up-row__badge up-row__badge--${item.status}">${pipelineStatusLabel(item.status)}</span>
+            </div>
+            <h3 class="up-row__title">${item.title}</h3>
+            <p class="up-row__meta">${metaParts([topic, format, voice])}</p>
+            ${isQueued ? '<p class="up-row__hint">In pipeline — needs a publish date</p>' : ""}
           </div>
-          <h3 class="up-row__title">${item.title}</h3>
-          <p class="up-row__meta">${metaParts([topic, format, voice])}</p>
-          ${isQueued ? '<p class="up-row__hint">In pipeline — needs a publish date</p>' : ""}
         </div>
         <div class="row-menu">
           <button
@@ -495,7 +500,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
 <style>
   .pipe-page {
     display: grid;
-    gap: 0.85rem;
+    gap: 0.65rem;
   }
 
   .pipe-ops {
@@ -504,37 +509,52 @@ import AppLayout from "../../layouts/AppLayout.astro";
     align-items: stretch;
     gap: 0;
     margin: 0;
-    padding: 0.7rem 0.85rem;
-    border-radius: var(--radius);
+    padding: 0.45rem 0.65rem;
+    border-radius: var(--radius-sm);
     border: 1px solid var(--line);
-    background: var(--elevated);
-    box-shadow: var(--shadow-sm);
+    background: rgba(255, 255, 255, 0.72);
+  }
+
+  .pipe-ops :global(.pipe-ops__real),
+  .pipe-ops :global(.pipe-ops__satire) {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: stretch;
+  }
+
+  .pipe-ops :global(.pipe-ops__satire) {
+    border-left: 1px solid var(--line);
+    margin-left: 0.35rem;
+    padding-left: 0.35rem;
   }
 
   .pipe-ops :global(.pipe-ops__item) {
     display: grid;
-    gap: 0.12rem;
-    flex: 1 1 6.5rem;
+    gap: 0.04rem;
+    flex: 1 1 4.75rem;
     min-width: 0;
-    padding: 0 1rem;
+    padding: 0 0.6rem;
     border-right: 1px solid var(--line);
   }
 
-  .pipe-ops :global(.pipe-ops__item:first-child) {
-    padding-left: 0.15rem;
+  .pipe-ops :global(.pipe-ops__real .pipe-ops__item:first-child),
+  .pipe-ops :global(.pipe-ops__satire .pipe-ops__item:first-child) {
+    padding-left: 0.1rem;
   }
 
-  .pipe-ops :global(.pipe-ops__item:last-child) {
+  .pipe-ops :global(.pipe-ops__real .pipe-ops__item:last-child),
+  .pipe-ops :global(.pipe-ops__satire .pipe-ops__item:last-child) {
     border-right: none;
-    padding-right: 0.15rem;
+    padding-right: 0.1rem;
   }
 
   .pipe-ops :global(.pipe-ops__value) {
     font-family: var(--font-display);
-    font-size: 1.35rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    line-height: 1.1;
-    letter-spacing: -0.03em;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
     color: var(--ink);
   }
 
@@ -548,25 +568,39 @@ import AppLayout from "../../layouts/AppLayout.astro";
   .pipe-ops :global(.pipe-ops__value-unit),
   .pipe-ops :global(.pipe-ops__value-sub) {
     font-family: var(--font-body);
-    font-size: 0.78rem;
+    font-size: 0.72rem;
     font-weight: 650;
     letter-spacing: 0;
     color: var(--ink-muted);
   }
 
   .pipe-ops :global(.pipe-ops__value-sep) {
-    margin: 0 0.12rem;
+    margin: 0 0.08rem;
     font-family: var(--font-body);
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     font-weight: 500;
     color: var(--ink-muted);
   }
 
   .pipe-ops :global(.pipe-ops__label) {
-    font-size: 0.72rem;
-    font-weight: 650;
-    letter-spacing: 0.02em;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     color: var(--ink-muted);
+  }
+
+  .pipe-ops :global(.pipe-ops__item--satire .pipe-ops__value) {
+    font-family: var(--font-body);
+    font-size: 0.88rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ink-soft);
+  }
+
+  .pipe-ops :global(.pipe-ops__item--satire .pipe-ops__label) {
+    font-size: 0.62rem;
+    letter-spacing: 0.03em;
   }
 
   .pipe-ops :global(.pipe-ops__item--runway .pipe-ops__value) {
@@ -894,6 +928,35 @@ import AppLayout from "../../layouts/AppLayout.astro";
     background: linear-gradient(90deg, rgba(12, 143, 124, 0.07) 0%, var(--warm-soft) 100%);
   }
 
+  .upcoming-list :global(.up-row__body) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .upcoming-list :global(.up-row__mark) {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    margin-top: 0.12rem;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    font-size: 0.62rem;
+    font-weight: 800;
+    color: #fff;
+    background: var(--mark);
+    letter-spacing: -0.03em;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+
+  .upcoming-list :global(.up-row__mark--offline) {
+    opacity: 0.62;
+    filter: grayscale(0.25);
+  }
+
   .upcoming-list :global(.up-row__main) {
     min-width: 0;
     flex: 1;
@@ -957,17 +1020,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     font-weight: 600;
     color: #9a6a28;
     line-height: 1.35;
-  }
-
-  .upcoming-list :global(.up-row__channel) {
-    font-size: 0.74rem;
-    font-weight: 650;
-    color: var(--accent-hover);
-  }
-
-  .upcoming-list :global(.up-row__channel--offline) {
-    color: var(--ink-muted);
-    font-weight: 600;
   }
 
   .upcoming-list :global(.up-row__title) {
