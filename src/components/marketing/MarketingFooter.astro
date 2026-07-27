@@ -1,4 +1,5 @@
 ---
+import { withBase } from "../../lib/paths";
 ---
 
 <footer class="m-footer">
@@ -12,17 +13,17 @@
     </div>
     <div>
       <h3>Product</h3>
-      <a href="/#product">How it works</a>
-      <a href="/app/compose">Compose</a>
-      <a href="/app">Pipeline</a>
-      <a href="/#plans">Plans</a>
+      <a href={withBase("/#product")}>How it works</a>
+      <a href={withBase("/app/compose")}>Compose</a>
+      <a href={withBase("/app")}>Pipeline</a>
+      <a href={withBase("/#plans")}>Plans</a>
     </div>
     <div>
       <h3>Desk</h3>
-      <a href="/app">Pipeline</a>
-      <a href="/app/coverage">Coverage</a>
-      <a href="/app/channels">Channels</a>
-      <a href="/app/brand">Brand</a>
+      <a href={withBase("/app")}>Pipeline</a>
+      <a href={withBase("/app/coverage")}>Coverage</a>
+      <a href={withBase("/app/channels")}>Channels</a>
+      <a href={withBase("/app/brand")}>Brand</a>
     </div>
     <div>
       <h3>For</h3>

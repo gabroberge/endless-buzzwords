@@ -1,5 +1,6 @@
 ---
 import MarketingLayout from "../layouts/MarketingLayout.astro";
+import { withBase } from "../lib/paths";
 ---
 
 <MarketingLayout
@@ -16,7 +17,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
           Never run out of technical content again. Turn one idea into a week of posts — and keep your authority visible across every channel.
         </p>
         <div class="open__cta">
-          <a class="btn btn-primary" href="/app/compose">Open workspace</a>
+          <a class="btn btn-primary" href={withBase("/app/compose")}>Open workspace</a>
           <a class="btn btn-ghost" href="#product">See the product</a>
         </div>
       </div>
@@ -189,7 +190,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
             <li>Weekly cadence tracking</li>
             <li>1 voice profile</li>
           </ul>
-          <a class="btn btn-ghost btn-block" href="/app">Start on Studio</a>
+          <a class="btn btn-ghost btn-block" href={withBase("/app")}>Start on Studio</a>
         </article>
         <article class="card plan plan--featured">
           <div class="plan__head">
@@ -203,7 +204,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
             <li>Coverage maps</li>
             <li>Adaptive Seniority™</li>
           </ul>
-          <a class="btn btn-primary btn-block" href="/app/compose">Open Desk</a>
+          <a class="btn btn-primary btn-block" href={withBase("/app/compose")}>Open Desk</a>
         </article>
         <article class="card plan">
           <h3>Organization</h3>
@@ -214,7 +215,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
             <li>Priority channel slots</li>
             <li>Workspace export</li>
           </ul>
-          <a class="btn btn-ghost btn-block" href="/app/brand">Configure brand</a>
+          <a class="btn btn-ghost btn-block" href={withBase("/app/brand")}>Configure brand</a>
         </article>
       </div>
     </div>
@@ -227,7 +228,7 @@ import MarketingLayout from "../layouts/MarketingLayout.astro";
         <h2>Stay technical. Stay visible.</h2>
         <p class="muted">Your content runway is unlimited. Open the workspace and fill the pipeline before the feed goes quiet.</p>
       </div>
-      <a class="btn btn-accent" href="/app/compose">Compose the next post</a>
+      <a class="btn btn-accent" href={withBase("/app/compose")}>Compose the next post</a>
     </div>
   </section>
 </MarketingLayout>

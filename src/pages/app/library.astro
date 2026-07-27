@@ -1,5 +1,6 @@
 ---
 import AppLayout from "../../layouts/AppLayout.astro";
+import { withBase } from "../../lib/paths";
 ---
 
 <AppLayout title="Library" eyebrow="Archive">
@@ -39,7 +40,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
       <p class="library-empty__note muted">
         Compose your first piece and save it here. Everything you create will stay available to reuse later.
       </p>
-      <a class="btn btn-accent btn-sm" href="/app/compose">Compose something</a>
+      <a class="btn btn-accent btn-sm" href={withBase("/app/compose")}>Compose something</a>
     </div>
   </section>
 </AppLayout>

@@ -1,5 +1,6 @@
 ---
 import AppLayout from "../../layouts/AppLayout.astro";
+import { withBase } from "../../lib/paths";
 ---
 
 <AppLayout title="Compose" eyebrow="Create">
@@ -13,7 +14,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
         <div id="topic-empty" class="topic-empty" hidden>
           <p class="topic-empty__title">No focus topics configured</p>
           <p class="topic-empty__note muted">Add topics to your brand before composing technical authority.</p>
-          <a class="btn btn-accent btn-sm" href="/app/brand">Configure brand</a>
+          <a class="btn btn-accent btn-sm" href={withBase("/app/brand")}>Configure brand</a>
         </div>
         <label>
           Format

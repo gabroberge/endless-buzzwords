@@ -1,5 +1,6 @@
 ---
 import AppLayout from "../../layouts/AppLayout.astro";
+import { withBase } from "../../lib/paths";
 ---
 
 <AppLayout title="Pipeline" eyebrow="Operations">
@@ -18,7 +19,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
               <div id="schedule-no-channels" class="schedule-panel__notice" hidden>
                 <p class="schedule-panel__notice-title">No distribution channels connected</p>
                 <p class="schedule-panel__notice-note muted">Connect at least one channel before scheduling content.</p>
-                <a class="schedule-panel__link" href="/app/channels">Go to Channels</a>
+                <a class="schedule-panel__link" href={withBase("/app/channels")}>Go to Channels</a>
               </div>
               <div id="schedule-list-view">
                 <p class="schedule-panel__label">Add from library</p>
@@ -26,7 +27,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
                 <p class="schedule-panel__empty" id="schedule-empty" hidden>
                   <span class="schedule-panel__empty-title">No content available</span>
                   <span class="schedule-panel__empty-note muted">Everything in your library is already queued.</span>
-                  <a class="schedule-panel__link" href="/app/compose">Compose something</a>
+                  <a class="schedule-panel__link" href={withBase("/app/compose")}>Compose something</a>
                 </p>
               </div>
               <div id="schedule-form-view" hidden>
