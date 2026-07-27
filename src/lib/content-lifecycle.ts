@@ -176,6 +176,50 @@ export function queueContent(
   };
 }
 
+export function getAvailableForPipeline(ws: Workspace): Draft[] {
+  return getLibraryItems(ws).filter((item) => !hasActiveQueueEntry(ws, item.id));
+}
+
+export function publishPipelineItem(ws: Workspace, pipelineId: string): Workspace {
+  const item = ws.pipeline.find((p) => p.id === pipelineId);
+  if (!item || item.status === "published") return ws;
+
+  const content = findContent(ws, item.draftId);
+  return {
+    ...ws,
+    pipeline: ws.pipeline.map((p) => (p.id === pipelineId ? { ...p, status: "published" as const } : p)),
+    drafts: content ? upsertContent(ws.drafts, { ...content, lifecycle: "published" }) : ws.drafts,
+  };
+}
+
+export function removeFromPipeline(ws: Workspace, pipelineId: string): Workspace {
+  const item = ws.pipeline.find((p) => p.id === pipelineId);
+  if (!item || item.status === "published") return ws;
+
+  const content = findContent(ws, item.draftId);
+  const nextLifecycle = hasPublishedHistory(ws, item.draftId) ? ("published" as const) : ("draft" as const);
+
+  return {
+    ...ws,
+    pipeline: ws.pipeline.filter((p) => p.id !== pipelineId),
+    drafts: content ? upsertContent(ws.drafts, { ...content, lifecycle: nextLifecycle }) : ws.drafts,
+  };
+}
+
+export function upcomingThisWeekCount(ws: Workspace): number {
+  const now = new Date();
+  const start = new Date(now);
+  start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+
+  return getQueuedPipelineItems(ws).filter((item) => {
+    const when = new Date(item.when).getTime();
+    return when >= start.getTime() && when < end.getTime();
+  }).length;
+}
+
 export function publishNextPipelineItem(ws: Workspace): Workspace {
   const next = [...ws.pipeline]
     .sort((a, b) => +new Date(a.when) - +new Date(b.when))

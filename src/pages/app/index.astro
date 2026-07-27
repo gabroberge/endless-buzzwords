@@ -3,224 +3,835 @@ import AppLayout from "../../layouts/AppLayout.astro";
 ---
 
 <AppLayout title="Pipeline" eyebrow="Operations">
-  <section class="pipe">
-    <div class="metric-grid" id="metrics"></div>
+  <section class="pipe-page">
+    <div class="pipe-ops" id="pipe-ops" aria-label="Pipeline summary" aria-live="polite"></div>
 
-    <div class="pipe-grid">
-      <article class="card panel">
-        <header class="panel__head">
-          <h2>Upcoming</h2>
-          <button class="btn btn-soft btn-sm" type="button" id="advance">Mark next published</button>
-        </header>
-        <ul class="feed" id="upcoming"></ul>
-      </article>
-
-      <article class="card panel">
-        <header class="panel__head">
-          <h2>Ready to schedule</h2>
-          <a href="/app/compose">Compose</a>
-        </header>
-        <ul class="feed" id="ready"></ul>
-      </article>
-
-      <article class="card panel panel--cta">
-        <p class="eyebrow">Never let the feed go quiet</p>
-        <h2>Fill next week's slots</h2>
-        <p class="muted">Compose a draft, queue it to a channel, and keep your content runway unlimited.</p>
-        <div class="actions">
-          <a class="btn btn-accent" href="/app/compose">Open Compose</a>
-          <a class="btn btn-ghost" href="/app/coverage">Review coverage</a>
+    <section class="panel card">
+      <header class="panel__head">
+        <h2>Upcoming</h2>
+        <div class="panel__actions">
+          <div class="schedule-anchor">
+            <button class="btn btn-soft btn-sm" type="button" id="schedule-toggle" aria-expanded="false" aria-controls="schedule-panel">
+              + Schedule content
+            </button>
+            <div class="schedule-panel" id="schedule-panel" hidden>
+              <p class="schedule-panel__label">Add from library</p>
+              <ul class="schedule-list" id="schedule-list"></ul>
+              <p class="schedule-panel__empty" id="schedule-empty" hidden>
+                <span class="schedule-panel__empty-title">No content available</span>
+                <span class="schedule-panel__empty-note muted">Everything in your library is already queued.</span>
+                <a class="schedule-panel__link" href="/app/compose">Compose something</a>
+              </p>
+            </div>
+          </div>
         </div>
-      </article>
-    </div>
+      </header>
+
+      <ul class="upcoming-list" id="upcoming"></ul>
+      <div class="upcoming-empty" id="upcoming-empty" hidden>
+        <p class="upcoming-empty__title">Nothing scheduled yet</p>
+        <p class="upcoming-empty__note muted">Use <strong>Schedule content</strong> to add your next piece.</p>
+      </div>
+    </section>
   </section>
 </AppLayout>
 
 <script>
-  import { getDraftItems, getQueuedPipelineItems, publishNextPipelineItem } from "../../lib/content-lifecycle";
+  import { formats } from "../../lib/data/formats";
+  import { topicById } from "../../lib/data/topics";
+  import { voiceProfiles } from "../../lib/data/voice";
+  import {
+    findContent,
+    getAvailableForPipeline,
+    getQueuedPipelineItems,
+    libraryStatusOf,
+    publishPipelineItem,
+    queueContent,
+    removeFromPipeline,
+  } from "../../lib/content-lifecycle";
   import { computeOpsMetrics } from "../../lib/metrics";
-  import { authorityLabel } from "../../lib/transforms";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { formatDay, showToast } from "../../lib/ui";
+
+  const channelLabels: Record<string, string> = {
+    linkedin: "LinkedIn",
+    x: "X",
+    youtube: "YouTube",
+    facebook: "Facebook",
+    newsletter: "Newsletter",
+  };
+
+  const formatById = Object.fromEntries(formats.map((f) => [f.id, f.label]));
+  const voiceById = Object.fromEntries(voiceProfiles.map((v) => [v.id, v.label]));
+
+  const scheduleToggle = document.getElementById("schedule-toggle")!;
+  const schedulePanel = document.getElementById("schedule-panel")!;
+  const upcomingEl = document.getElementById("upcoming")!;
+  const upcomingEmpty = document.getElementById("upcoming-empty")!;
+
+  let openMenuId: string | null = null;
+
+  function metaParts(parts: string[]): string {
+    return parts
+      .filter(Boolean)
+      .map((part) => `<span>${part}</span>`)
+      .join('<span class="up-row__sep" aria-hidden="true">·</span>');
+  }
+
+  function pipelineStatusLabel(status: string): string {
+    return status === "scheduled" ? "Scheduled" : status === "queued" ? "Queued" : status;
+  }
+
+  function runwayValue(m: ReturnType<typeof computeOpsMetrics>): string {
+    if (m.contentRunway === "Unlimited") {
+      return `<span class="pipe-ops__value-main">∞</span>`;
+    }
+    const days = m.scheduledAheadDays;
+    const unit = days === 1 ? "day" : "days";
+    return `<span class="pipe-ops__value-main">${days}</span> <span class="pipe-ops__value-unit">${unit}</span>`;
+  }
+
+  function cadenceState(published: number, target: number): "under" | "met" | "over" {
+    if (published < target) return "under";
+    if (published > target) return "over";
+    return "met";
+  }
+
+  function renderOpsSummary(m: ReturnType<typeof computeOpsMetrics>, upcomingCount: number) {
+    const ops = document.getElementById("pipe-ops");
+    if (!ops) return;
+
+    const cadence = cadenceState(m.publishedThisWeek, m.cadenceTarget);
+    const runwayClass =
+      m.contentRunway === "Unlimited"
+        ? "pipe-ops__item--runway-ok"
+        : m.scheduledAheadDays <= 2
+          ? "pipe-ops__item--runway-low"
+          : m.scheduledAheadDays <= 6
+            ? "pipe-ops__item--runway-mid"
+            : "pipe-ops__item--runway-ok";
+
+    ops.innerHTML = `
+      <div class="pipe-ops__item">
+        <span class="pipe-ops__value">${upcomingCount}</span>
+        <span class="pipe-ops__label">Upcoming</span>
+      </div>
+      <div class="pipe-ops__item pipe-ops__item--runway ${runwayClass}">
+        <span class="pipe-ops__value">${runwayValue(m)}</span>
+        <span class="pipe-ops__label">Runway</span>
+      </div>
+      <div class="pipe-ops__item pipe-ops__item--cadence pipe-ops__item--cadence-${cadence}">
+        <span class="pipe-ops__value">
+          <span class="pipe-ops__value-main">${m.publishedThisWeek}</span>
+          <span class="pipe-ops__value-sep">/</span>
+          <span class="pipe-ops__value-sub">${m.cadenceTarget}</span>
+        </span>
+        <span class="pipe-ops__label">Published this week</span>
+      </div>`;
+  }
+
+  function closeSchedulePanel() {
+    schedulePanel.hidden = true;
+    scheduleToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function closeRowMenu() {
+    if (!openMenuId) return;
+    const menu = document.querySelector(`[data-menu-panel="${openMenuId}"]`) as HTMLElement | null;
+    const trigger = document.querySelector(`[data-menu-trigger="${openMenuId}"]`) as HTMLElement | null;
+    menu?.setAttribute("hidden", "");
+    trigger?.setAttribute("aria-expanded", "false");
+    openMenuId = null;
+  }
+
+  function toggleSchedulePanel() {
+    const open = schedulePanel.hidden;
+    closeRowMenu();
+    schedulePanel.hidden = !open;
+    scheduleToggle.setAttribute("aria-expanded", String(open));
+  }
+
+  function pickerRow(ws: ReturnType<typeof loadWorkspace>, draft: (typeof ws.drafts)[number]): string {
+    const status = libraryStatusOf(ws, draft);
+    const topic = topicById[draft.topicId]?.label ?? draft.topicId;
+    const format = formatById[draft.formatId] ?? draft.formatId.replaceAll("-", " ");
+
+    return `
+      <li class="pick-row">
+        <div class="pick-row__main">
+          <span class="pick-row__badge pick-row__badge--${status}">${status === "published" ? "Published" : "Draft"}</span>
+          <div class="pick-row__copy">
+            <span class="pick-row__title">${draft.title}</span>
+            <span class="pick-row__meta">${metaParts([topic, format])}</span>
+          </div>
+        </div>
+        <button class="btn btn-ghost btn-sm" type="button" data-schedule="${draft.id}">Add</button>
+      </li>`;
+  }
+
+  function upcomingRow(
+    ws: ReturnType<typeof loadWorkspace>,
+    item: (typeof ws.pipeline)[number],
+    { isNext }: { isNext: boolean },
+  ): string {
+    const content = findContent(ws, item.draftId);
+    const topic = content ? topicById[content.topicId]?.label ?? content.topicId : "";
+    const format = content ? formatById[content.formatId] ?? content.formatId.replaceAll("-", " ") : "";
+    const voice = content ? voiceById[content.voiceId] ?? content.voiceId : "";
+    const isQueued = item.status === "queued";
+    const rowClass = [
+      "up-row",
+      isNext ? "up-row--next" : "",
+      isQueued ? "up-row--queued" : "up-row--scheduled",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return `
+      <li class="${rowClass}">
+        <div class="up-row__main">
+          <div class="up-row__head">
+            ${isNext ? '<span class="up-row__next">Next</span>' : ""}
+            <span class="up-row__date">${formatDay(item.when)}</span>
+            <span class="up-row__badge up-row__badge--${item.status}">${pipelineStatusLabel(item.status)}</span>
+            <span class="up-row__channel">${channelLabels[item.channelId] ?? item.channelId}</span>
+          </div>
+          <h3 class="up-row__title">${item.title}</h3>
+          <p class="up-row__meta">${metaParts([topic, format, voice])}</p>
+          ${isQueued ? '<p class="up-row__hint">In pipeline — needs a publish date</p>' : ""}
+        </div>
+        <div class="row-menu">
+          <button
+            class="row-menu__trigger"
+            type="button"
+            data-menu-trigger="${item.id}"
+            aria-label="Pipeline actions"
+            aria-haspopup="menu"
+            aria-expanded="false"
+          >⋯</button>
+          <div class="row-menu__panel" data-menu-panel="${item.id}" role="menu" hidden>
+            <button class="row-menu__item" type="button" role="menuitem" data-publish="${item.id}">Mark published</button>
+            <button class="row-menu__item" type="button" role="menuitem" data-remove="${item.id}">Remove from pipeline</button>
+          </div>
+        </div>
+      </li>`;
+  }
+
+  function renderSchedulePanel(ws: ReturnType<typeof loadWorkspace>) {
+    const available = getAvailableForPipeline(ws);
+    const list = document.getElementById("schedule-list")!;
+    const empty = document.getElementById("schedule-empty")!;
+
+    if (available.length) {
+      list.hidden = false;
+      empty.hidden = true;
+      list.innerHTML = available.map((item) => pickerRow(ws, item)).join("");
+    } else {
+      list.hidden = true;
+      empty.hidden = false;
+      list.innerHTML = "";
+    }
+  }
 
   function render() {
     const ws = loadWorkspace();
     const m = computeOpsMetrics(ws);
+    const upcoming = getQueuedPipelineItems(ws);
+    const nextScheduledId = upcoming.find((item) => item.status === "scheduled")?.id;
 
-    const metrics = document.getElementById("metrics");
-    if (metrics) {
-      const cards = [
-        ["Cadence", `${m.publishedThisWeek} / ${m.cadenceTarget} this week`],
-        ["Content runway", m.contentRunway],
-        ["Authority", m.authorityLevel],
-        ["Buzzwords deployed", String(m.buzzwordsDeployed)],
-        ["Original thoughts", String(m.originalThoughts)],
-        ["Senior content ratio", `${m.seniorContentRatio}%`],
-        ["Engagement potential", m.engagementPotential],
-        ["Human review", m.humanReview],
-      ];
-      metrics.innerHTML = cards
-        .map(
-          ([label, value]) => `
-        <div class="card metric">
-          <span>${label}</span>
-          <strong>${value}</strong>
-        </div>`,
-        )
+    renderOpsSummary(m, upcoming.length);
+    renderSchedulePanel(ws);
+
+    if (upcoming.length) {
+      upcomingEl.hidden = false;
+      upcomingEmpty.hidden = true;
+      upcomingEl.innerHTML = upcoming
+        .map((item) => upcomingRow(ws, item, { isNext: item.id === nextScheduledId }))
         .join("");
+    } else {
+      upcomingEl.hidden = true;
+      upcomingEmpty.hidden = false;
+      upcomingEl.innerHTML = "";
     }
 
-    const upcoming = document.getElementById("upcoming");
-    if (upcoming) {
-      const items = getQueuedPipelineItems(ws);
-      upcoming.innerHTML = items.length
-        ? items
-            .map(
-              (p) => `
-          <li>
-            <div>
-              <strong>${p.title}</strong>
-              <p class="muted">${formatDay(p.when)} · ${p.channelId} · ${p.status}</p>
-            </div>
-          </li>`,
-            )
-            .join("")
-        : `<li><div><strong>Queue clear</strong><p class="muted">Schedule something from Compose or Library.</p></div></li>`;
-    }
-
-    const ready = document.getElementById("ready");
-    if (ready) {
-      const draftItems = getDraftItems(ws);
-      ready.innerHTML = draftItems.length
-        ? draftItems
-            .slice(0, 5)
-            .map(
-              (d) => `
-          <li>
-            <div>
-              <strong>${d.title}</strong>
-              <p class="muted">${d.formatId.replaceAll("-", " ")} · authority ${authorityLabel(d.authorityTier ?? Math.max(0, (d.seniority ?? 2) - 2)).toLowerCase()}</p>
-            </div>
-          </li>`,
-            )
-            .join("")
-        : `<li><div><strong>No drafts yet</strong><p class="muted">Compose something. Seniority is adjustable.</p></div></li>`;
-    }
+    closeRowMenu();
   }
 
-  document.getElementById("advance")?.addEventListener("click", () => {
-    updateWorkspace((s) => publishNextPipelineItem(s));
-    showToast("Marked as published");
+  scheduleToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleSchedulePanel();
+  });
+
+  schedulePanel.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const btn = (e.target as HTMLElement).closest("[data-schedule]") as HTMLElement | null;
+    if (!btn) return;
+    e.stopPropagation();
+    const id = btn.dataset.schedule;
+    if (!id) return;
+    const draft = findContent(loadWorkspace(), id);
+    if (!draft) return;
+    updateWorkspace((s) => queueContent(s, draft));
+    showToast("Added to pipeline");
+    closeSchedulePanel();
     render();
     window.dispatchEvent(new Event("eb:workspace"));
   });
 
+  upcomingEl.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const trigger = (e.target as HTMLElement).closest("[data-menu-trigger]") as HTMLElement | null;
+    if (trigger) {
+      e.stopPropagation();
+      const id = trigger.dataset.menuTrigger!;
+      if (openMenuId === id) {
+        closeRowMenu();
+        return;
+      }
+      closeRowMenu();
+      const panel = document.querySelector(`[data-menu-panel="${id}"]`) as HTMLElement;
+      panel.hidden = false;
+      trigger.setAttribute("aria-expanded", "true");
+      openMenuId = id;
+      return;
+    }
+
+    const publishBtn = (e.target as HTMLElement).closest("[data-publish]") as HTMLElement | null;
+    if (publishBtn) {
+      const id = publishBtn.dataset.publish;
+      if (!id) return;
+      updateWorkspace((s) => publishPipelineItem(s, id));
+      showToast("Marked as published");
+      closeRowMenu();
+      render();
+      window.dispatchEvent(new Event("eb:workspace"));
+      return;
+    }
+
+    const removeBtn = (e.target as HTMLElement).closest("[data-remove]") as HTMLElement | null;
+    if (removeBtn) {
+      const id = removeBtn.dataset.remove;
+      if (!id) return;
+      updateWorkspace((s) => removeFromPipeline(s, id));
+      showToast("Removed from pipeline");
+      closeRowMenu();
+      render();
+      window.dispatchEvent(new Event("eb:workspace"));
+    }
+  });
+
+  document.addEventListener("click", () => {
+    closeSchedulePanel();
+    closeRowMenu();
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeSchedulePanel();
+      closeRowMenu();
+    }
+  });
+
   render();
+  window.addEventListener("eb:workspace", render);
 </script>
 
 <style>
-  .metric-grid {
+  .pipe-page {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-    margin-bottom: 1rem;
+    gap: 0.85rem;
   }
 
-  .metric {
-    padding: 1rem 1.05rem;
+  .pipe-ops {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0.7rem 0.85rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--elevated);
+    box-shadow: var(--shadow-sm);
   }
 
-  .metric span {
-    display: block;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: var(--ink-muted);
-    margin-bottom: 0.3rem;
+  .pipe-ops__item {
+    display: grid;
+    gap: 0.12rem;
+    flex: 1 1 6.5rem;
+    min-width: 0;
+    padding: 0 1rem;
+    border-right: 1px solid var(--line);
   }
 
-  .metric strong {
+  .pipe-ops__item:first-child {
+    padding-left: 0.15rem;
+  }
+
+  .pipe-ops__item:last-child {
+    border-right: none;
+    padding-right: 0.15rem;
+  }
+
+  .pipe-ops__value {
     font-family: var(--font-display);
-    font-size: 1.15rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.1;
     letter-spacing: -0.03em;
+    color: var(--ink);
   }
 
-  .pipe-grid {
-    display: grid;
-    gap: 1rem;
+  .pipe-ops__value-main {
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    letter-spacing: inherit;
+  }
+
+  .pipe-ops__value-unit,
+  .pipe-ops__value-sub {
+    font-family: var(--font-body);
+    font-size: 0.78rem;
+    font-weight: 650;
+    letter-spacing: 0;
+    color: var(--ink-muted);
+  }
+
+  .pipe-ops__value-sep {
+    margin: 0 0.12rem;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink-muted);
+  }
+
+  .pipe-ops__label {
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    color: var(--ink-muted);
+  }
+
+  .pipe-ops__item--runway .pipe-ops__value {
+    color: var(--accent-hover);
+  }
+
+  .pipe-ops__item--runway-low .pipe-ops__value {
+    color: var(--warm);
+  }
+
+  .pipe-ops__item--runway-low .pipe-ops__label {
+    color: #9a6a28;
+  }
+
+  .pipe-ops__item--cadence-under .pipe-ops__value-main {
+    color: var(--warm);
+  }
+
+  .pipe-ops__item--cadence-met .pipe-ops__value-main {
+    color: var(--accent-hover);
+  }
+
+  .pipe-ops__item--cadence-over .pipe-ops__value-main {
+    color: var(--ink);
   }
 
   .panel {
-    padding: 1.15rem 1.2rem 1.25rem;
+    padding: 1rem 1.05rem 1.15rem;
   }
 
   .panel__head {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 1rem;
-    margin-bottom: 0.9rem;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.85rem;
   }
 
   .panel__head h2 {
     font-family: var(--font-body);
     font-size: 1rem;
     font-weight: 750;
+    margin: 0;
   }
 
-  .panel__head a {
-    font-size: 0.85rem;
+  .panel__actions {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .schedule-anchor {
+    position: relative;
+  }
+
+  .schedule-panel {
+    position: absolute;
+    top: calc(100% + 0.4rem);
+    right: 0;
+    z-index: 12;
+    width: min(22rem, calc(100vw - 2.5rem));
+    padding: 0.65rem;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .schedule-panel[hidden] {
+    display: none !important;
+  }
+
+  .schedule-panel__label {
+    margin: 0 0 0.45rem;
+    padding: 0 0.35rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-muted);
+  }
+
+  .schedule-panel__empty {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.55rem 0.4rem 0.45rem;
+  }
+
+  .schedule-panel__empty[hidden] {
+    display: none !important;
+  }
+
+  .schedule-panel__empty-title {
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .schedule-panel__empty-note {
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .schedule-panel__link {
+    margin-top: 0.15rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--accent-hover);
   }
 
-  .feed {
-    display: grid;
-    gap: 0.75rem;
+  .schedule-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 16rem;
+    overflow-y: auto;
   }
 
-  .feed li {
-    padding-bottom: 0.75rem;
+  .schedule-list[hidden] {
+    display: none !important;
+  }
+
+  .schedule-list :global(.pick-row) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+    padding: 0.5rem 0.35rem;
     border-bottom: 1px solid var(--line);
   }
 
-  .feed li:last-child {
+  .schedule-list :global(.pick-row:last-child) {
     border-bottom: none;
-    padding-bottom: 0;
   }
 
-  .feed strong {
-    display: block;
-    font-size: 0.95rem;
+  .schedule-list :global(.pick-row__main) {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    min-width: 0;
+    flex: 1;
   }
 
-  .feed .muted {
-    font-size: 0.82rem;
-    margin-top: 0.2rem;
+  .schedule-list :global(.pick-row__copy) {
+    min-width: 0;
+    display: grid;
+    gap: 0.12rem;
   }
 
-  .panel--cta h2 {
-    margin: 0.35rem 0 0.5rem;
-    font-size: 1.45rem;
+  .schedule-list :global(.pick-row__badge) {
+    flex-shrink: 0;
+    margin-top: 0.12rem;
+    padding: 0.1rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
   }
 
-  .actions {
+  .schedule-list :global(.pick-row__badge--draft) {
+    background: var(--surface-2);
+    color: var(--ink-muted);
+  }
+
+  .schedule-list :global(.pick-row__badge--published) {
+    background: rgba(12, 143, 124, 0.12);
+    color: var(--accent-hover);
+  }
+
+  .schedule-list :global(.pick-row__title) {
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .schedule-list :global(.pick-row__meta) {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.55rem;
-    margin-top: 1.1rem;
+    gap: 0.2rem 0.3rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--ink-muted);
   }
 
-  @media (min-width: 800px) {
-    .metric-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
+  .upcoming-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
 
-    .pipe-grid {
-      grid-template-columns: 1.1fr 1.1fr;
-    }
+  .upcoming-list[hidden] {
+    display: none !important;
+  }
 
-    .panel--cta {
-      grid-column: 1 / -1;
-    }
+  .upcoming-list :global(.up-row) {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0 -0.55rem;
+    padding: 0.72rem 0.55rem;
+    border-bottom: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    border-radius: 0;
+    transition:
+      background 0.15s var(--ease),
+      border-color 0.15s var(--ease);
+  }
+
+  .upcoming-list :global(.up-row:last-child) {
+    border-bottom: none;
+    padding-bottom: 0.72rem;
+  }
+
+  .upcoming-list :global(.up-row--scheduled:hover) {
+    background: rgba(10, 22, 40, 0.02);
+  }
+
+  .upcoming-list :global(.up-row--next) {
+    border-left-color: var(--accent);
+    background: rgba(12, 143, 124, 0.05);
+    border-radius: 0 8px 8px 0;
+  }
+
+  .upcoming-list :global(.up-row--next:hover) {
+    background: rgba(12, 143, 124, 0.08);
+  }
+
+  .upcoming-list :global(.up-row--queued) {
+    border-left-color: rgba(201, 133, 46, 0.45);
+    background: var(--warm-soft);
+    border-radius: 0 8px 8px 0;
+  }
+
+  .upcoming-list :global(.up-row--queued:hover) {
+    background: rgba(201, 133, 46, 0.18);
+  }
+
+  .upcoming-list :global(.up-row--next.up-row--queued) {
+    border-left-color: var(--accent);
+    background: linear-gradient(90deg, rgba(12, 143, 124, 0.07) 0%, var(--warm-soft) 100%);
+  }
+
+  .upcoming-list :global(.up-row__main) {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .upcoming-list :global(.up-row__head) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.55rem;
+    margin-bottom: 0.28rem;
+  }
+
+  .upcoming-list :global(.up-row__next) {
+    padding: 0.1rem 0.42rem;
+    border-radius: 999px;
+    font-size: 0.62rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: var(--accent-soft);
+    color: var(--accent-hover);
+  }
+
+  .upcoming-list :global(.up-row__date) {
+    font-size: 0.76rem;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .upcoming-list :global(.up-row--queued .up-row__date) {
+    font-weight: 650;
+    font-style: italic;
+    color: var(--ink-muted);
+  }
+
+  .upcoming-list :global(.up-row__badge) {
+    padding: 0.1rem 0.42rem;
+    border-radius: 999px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    background: rgba(10, 22, 40, 0.06);
+    color: var(--ink-muted);
+  }
+
+  .upcoming-list :global(.up-row__badge--scheduled) {
+    background: rgba(10, 22, 40, 0.06);
+    color: var(--ink-muted);
+  }
+
+  .upcoming-list :global(.up-row__badge--queued) {
+    background: rgba(201, 133, 46, 0.18);
+    color: #8a5a1e;
+  }
+
+  .upcoming-list :global(.up-row__hint) {
+    margin: 0.28rem 0 0;
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: #9a6a28;
+    line-height: 1.35;
+  }
+
+  .upcoming-list :global(.up-row__channel) {
+    font-size: 0.74rem;
+    font-weight: 650;
+    color: var(--accent-hover);
+  }
+
+  .upcoming-list :global(.up-row__title) {
+    margin: 0 0 0.22rem;
+    font-family: var(--font-body);
+    font-size: 0.92rem;
+    font-weight: 750;
+    line-height: 1.3;
+    color: var(--ink);
+  }
+
+  .upcoming-list :global(.up-row__meta) {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ink-muted);
+    line-height: 1.35;
+  }
+
+  .upcoming-list :global(.up-row__sep) {
+    color: var(--line-strong, #d0d5dd);
+  }
+
+  .upcoming-list :global(.row-menu) {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  .upcoming-list :global(.row-menu__trigger) {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--ink-muted);
+    cursor: pointer;
+    transition:
+      background 0.15s var(--ease),
+      border-color 0.15s var(--ease),
+      color 0.15s var(--ease);
+  }
+
+  .upcoming-list :global(.row-menu__trigger:hover) {
+    background: #f8fafc;
+    border-color: var(--line);
+    color: var(--ink);
+  }
+
+  .upcoming-list :global(.row-menu__panel) {
+    position: absolute;
+    top: calc(100% + 0.2rem);
+    right: 0;
+    z-index: 10;
+    min-width: 11.5rem;
+    padding: 0.3rem;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .upcoming-list :global(.row-menu__panel[hidden]) {
+    display: none !important;
+  }
+
+  .upcoming-list :global(.row-menu__item) {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.65rem;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 650;
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s var(--ease);
+  }
+
+  .upcoming-list :global(.row-menu__item:hover) {
+    background: #f8fafc;
+  }
+
+  .upcoming-empty {
+    padding: 1.5rem 0.5rem 0.75rem;
+    text-align: center;
+  }
+
+  .upcoming-empty[hidden] {
+    display: none !important;
+  }
+
+  .upcoming-empty__title {
+    margin: 0 0 0.3rem;
+    font-size: 0.9rem;
+    font-weight: 750;
+    color: var(--ink);
+  }
+
+  .upcoming-empty__note {
+    margin: 0;
+    font-size: 0.84rem;
+    line-height: 1.5;
   }
 </style>
