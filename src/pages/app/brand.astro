@@ -53,10 +53,10 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
 <script>
   import { topics } from "../../lib/data/topics";
-  import { bylineModes, voiceProfiles } from "../../lib/data/voice";
-  import { computeOpsMetrics } from "../../lib/metrics";
-  import { loadWorkspace, resetWorkspace, updateWorkspace } from "../../lib/storage";
-  import { showToast } from "../../lib/ui";
+import { bylineModes, voiceProfiles } from "../../lib/data/voice";
+import { computeOpsMetrics } from "../../lib/metrics";
+import { loadWorkspace, resetWorkspace, updateWorkspace } from "../../lib/storage";
+import { showToast } from "../../lib/ui";
 
   const brandEl = document.getElementById("brand") as HTMLInputElement;
   const voiceEl = document.getElementById("voice") as HTMLSelectElement;
@@ -292,13 +292,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     flex-wrap: wrap;
     gap: 0.55rem;
     padding-top: 0.15rem;
-  }
-
-  @media (max-width: 900px) {
-    .actions {
-      scroll-margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-    }
   }
 
   .aside h2 {

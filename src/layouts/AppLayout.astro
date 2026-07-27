@@ -1,7 +1,8 @@
 ---
-import BaseLayout from "./BaseLayout.astro";
+import AppMobileHeader from "../components/app/AppMobileHeader.astro";
 import AppSidebar from "../components/app/AppSidebar.astro";
 import AppTopbar from "../components/app/AppTopbar.astro";
+import BaseLayout from "./BaseLayout.astro";
 
 interface Props {
   title: string;
@@ -16,6 +17,7 @@ const pageTitle = `${title} · Endless Buzzwords™`;
   <div class="app-shell">
     <AppSidebar />
     <div class="app-main">
+      <AppMobileHeader />
       <AppTopbar title={title} eyebrow={eyebrow} />
       <div class="app-content">
         <slot />
@@ -51,7 +53,11 @@ const pageTitle = `${title} · Endless Buzzwords™`;
     }
 
     .app-content {
-      padding: 1rem 1rem calc(7.25rem + env(safe-area-inset-bottom, 0px));
+      padding: 1rem 1rem 2.5rem;
     }
+  }
+
+  :global(body.app-mobile-nav-open) {
+    overflow: hidden;
   }
 </style>
