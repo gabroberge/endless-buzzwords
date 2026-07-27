@@ -95,7 +95,7 @@ function seedPipeline(): PipelineItem[] {
       draftId: "seed4",
       title: "60-second script · caching",
       channelId: "youtube",
-      when: new Date(now + day * 4).toISOString(),
+      when: "",
       status: "queued",
     },
   ];

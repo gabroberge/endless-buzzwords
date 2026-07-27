@@ -1,11 +1,33 @@
 import { composeDraft } from "./content-engine";
 import type { Draft } from "./content-engine";
-import type { ChannelId, PipelineItem, Workspace } from "./storage";
+import type { Channel, ChannelId, PipelineItem, Workspace } from "./storage";
 
 export type ContentLifecycle = "draft" | "queued" | "published";
 
 export function channelForDraft(draft: Draft): ChannelId {
-  return draft.channelHint === "x" ? "x" : draft.channelHint === "youtube" ? "youtube" : "linkedin";
+  if (draft.channelHint === "x") return "x";
+  if (draft.channelHint === "youtube") return "youtube";
+  if (draft.channelHint === "newsletter") return "linkedin";
+  return "linkedin";
+}
+
+export function getConnectedChannels(ws: Workspace): Channel[] {
+  return ws.channels.filter((c) => c.connected);
+}
+
+export function isChannelConnected(ws: Workspace, channelId: ChannelId): boolean {
+  return ws.channels.some((c) => c.id === channelId && c.connected);
+}
+
+export function defaultChannelForDraft(ws: Workspace, draft: Draft): ChannelId | null {
+  const preferred = channelForDraft(draft);
+  if (isChannelConnected(ws, preferred)) return preferred;
+  return getConnectedChannels(ws)[0]?.id ?? null;
+}
+
+export function channelLabelForItem(ws: Workspace, channelId: ChannelId): string {
+  const channel = ws.channels.find((c) => c.id === channelId);
+  return channel?.label ?? channelId;
 }
 
 export function lifecycleOf(draft: Draft): ContentLifecycle {
@@ -37,7 +59,14 @@ export function dedupeActivePipeline(pipeline: PipelineItem[]): PipelineItem[] {
   const published = pipeline.filter((p) => p.status === "published");
   const active = pipeline
     .filter((p) => p.status === "queued" || p.status === "scheduled")
-    .sort((a, b) => +new Date(a.when) - +new Date(b.when));
+    .sort((a, b) => {
+      const aQueued = a.status === "queued";
+      const bQueued = b.status === "queued";
+      if (aQueued && bQueued) return 0;
+      if (aQueued) return 1;
+      if (bQueued) return -1;
+      return +new Date(a.when) - +new Date(b.when);
+    });
   const seen = new Set<string>();
   const uniqueActive: PipelineItem[] = [];
   for (const item of active) {
@@ -105,7 +134,14 @@ export function getDraftItems(ws: Workspace): Draft[] {
 export function getQueuedPipelineItems(ws: Workspace): PipelineItem[] {
   return ws.pipeline
     .filter((p) => p.status === "queued" || p.status === "scheduled")
-    .sort((a, b) => +new Date(a.when) - +new Date(b.when));
+    .sort((a, b) => {
+      const aQueued = a.status === "queued";
+      const bQueued = b.status === "queued";
+      if (aQueued && bQueued) return 0;
+      if (aQueued) return 1;
+      if (bQueued) return -1;
+      return +new Date(a.when) - +new Date(b.when);
+    });
 }
 
 export function getPublishedPipelineItems(ws: Workspace): PipelineItem[] {
@@ -150,13 +186,24 @@ export function saveToLibrary(ws: Workspace, draft: Draft): Workspace {
 export function queueContent(
   ws: Workspace,
   draft: Draft,
-  options: { when?: string; status?: PipelineItem["status"] } = {},
+  options: { channelId?: ChannelId; when?: string | null; status?: PipelineItem["status"] } = {},
 ): Workspace {
   if (hasActiveQueueEntry(ws, draft.id)) return ws;
+  if (getConnectedChannels(ws).length === 0) return ws;
 
-  const when = options.when ?? new Date(Date.now() + 86400000).toISOString();
-  const status = options.status ?? "scheduled";
-  const channelId = channelForDraft(draft);
+  let channelId: ChannelId | undefined = options.channelId;
+  if (channelId && !isChannelConnected(ws, channelId)) return ws;
+  if (!channelId) {
+    const fallback = defaultChannelForDraft(ws, draft);
+    if (!fallback) return ws;
+    channelId = fallback;
+  }
+
+  const when = options.when ?? "";
+  const hasDate = Boolean(when);
+  const status = options.status ?? (hasDate ? "scheduled" : "queued");
+  if (status === "scheduled" && !hasDate) return ws;
+
   const queued = { ...draft, lifecycle: "queued" as const };
 
   return {
@@ -168,11 +215,30 @@ export function queueContent(
         draftId: draft.id,
         title: draft.title,
         channelId,
-        when,
+        when: hasDate ? when : "",
         status,
       },
       ...ws.pipeline,
     ]),
+  };
+}
+
+export function schedulePipelineItem(
+  ws: Workspace,
+  pipelineId: string,
+  options: { channelId: ChannelId; when: string },
+): Workspace {
+  const item = ws.pipeline.find((p) => p.id === pipelineId);
+  if (!item || item.status === "published") return ws;
+  if (!options.when || !isChannelConnected(ws, options.channelId)) return ws;
+
+  return {
+    ...ws,
+    pipeline: ws.pipeline.map((p) =>
+      p.id === pipelineId
+        ? { ...p, channelId: options.channelId, when: options.when, status: "scheduled" as const }
+        : p,
+    ),
   };
 }
 
@@ -215,6 +281,7 @@ export function upcomingThisWeekCount(ws: Workspace): number {
   end.setDate(end.getDate() + 7);
 
   return getQueuedPipelineItems(ws).filter((item) => {
+    if (item.status !== "scheduled" || !item.when) return false;
     const when = new Date(item.when).getTime();
     return when >= start.getTime() && when < end.getTime();
   }).length;

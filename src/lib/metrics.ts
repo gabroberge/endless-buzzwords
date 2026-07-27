@@ -29,7 +29,7 @@ export function computeOpsMetrics(ws: Workspace): OpsMetrics {
   ).length;
 
   const upcoming = ws.pipeline
-    .filter((p) => p.status === "scheduled" || p.status === "queued")
+    .filter((p) => p.status === "scheduled" && p.when)
     .map((p) => new Date(p.when).getTime())
     .sort((a, b) => b - a);
   const farthest = upcoming[0] ?? Date.now();

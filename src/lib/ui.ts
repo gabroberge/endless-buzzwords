@@ -27,9 +27,31 @@ export function formatDate(iso: string): string {
 }
 
 export function formatDay(iso: string): string {
+  if (!iso) return "No date";
   return new Intl.DateTimeFormat("en", {
     weekday: "short",
     month: "short",
     day: "numeric",
   }).format(new Date(iso));
+}
+
+export function toDateInputValue(iso: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+export function fromDateInputValue(value: string): string {
+  if (!value) return "";
+  const [y, m, d] = value.split("-").map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0).toISOString();
+}
+
+export function defaultScheduleDateInput(daysAhead = 1): string {
+  const d = new Date();
+  d.setDate(d.getDate() + daysAhead);
+  return toDateInputValue(d.toISOString());
 }
