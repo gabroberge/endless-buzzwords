@@ -202,14 +202,20 @@ import AppLayout from "../../layouts/AppLayout.astro";
     const item = pipelineId ? ws.pipeline.find((p) => p.id === pipelineId) : null;
     const connected = getConnectedChannels(ws);
 
-    scheduleFormTitle.textContent = draft.title;
-    scheduleFormChannel.innerHTML = connected
-      .map((c) => `<option value="${c.id}">${c.label}</option>`)
-      .join("");
+    if (connected.length === 0) {
+      scheduleListView.hidden = true;
+      scheduleFormView.hidden = true;
+      scheduleNoChannels.hidden = false;
+      return;
+    }
 
-    const preferred = item?.channelId ?? connected[0]?.id;
-    if (preferred && connected.some((c) => c.id === preferred)) {
-      scheduleFormChannel.value = preferred;
+    scheduleFormTitle.textContent = draft.title;
+    scheduleFormChannel.innerHTML =
+      `<option value="" disabled selected>Select channel</option>` +
+      connected.map((c) => `<option value="${c.id}">${c.label}</option>`).join("");
+
+    if (item?.channelId && connected.some((c) => c.id === item.channelId)) {
+      scheduleFormChannel.value = item.channelId;
     }
 
     scheduleFormDate.value = item?.when ? toDateInputValue(item.when) : defaultScheduleDateInput(1);
@@ -263,8 +269,10 @@ import AppLayout from "../../layouts/AppLayout.astro";
     const format = content ? formatById[content.formatId] ?? content.formatId.replaceAll("-", " ") : "";
     const voice = content ? voiceById[content.voiceId] ?? content.voiceId : "";
     const isQueued = item.status === "queued";
-    const channelConnected = isChannelConnected(ws, item.channelId);
-    const dateLabel = isQueued ? "No date" : formatDay(item.when);
+    const channelConnected = item.channelId ? isChannelConnected(ws, item.channelId) : false;
+    const channelMark = item.channelId
+      ? channelMarkHtml(item.channelId, { className: "up-row__mark", offline: !channelConnected })
+      : `<span class="up-row__mark up-row__mark--unassigned" aria-hidden="true"></span>`;
     const rowClass = [
       "up-row",
       isNext ? "up-row--next" : "",
@@ -274,18 +282,18 @@ import AppLayout from "../../layouts/AppLayout.astro";
       .join(" ");
 
     return `
-      <li class="${rowClass}">
+      <li class="${rowClass}" data-pipeline-id="${item.id}" data-draft-id="${item.draftId}">
         <div class="up-row__body">
-          ${channelMarkHtml(item.channelId, { className: "up-row__mark", offline: !channelConnected })}
+          ${channelMark}
           <div class="up-row__main">
             <div class="up-row__head">
               ${isNext ? '<span class="up-row__next">Next</span>' : ""}
-              <span class="up-row__date">${dateLabel}</span>
+              ${!isQueued ? `<span class="up-row__date">${formatDay(item.when)}</span>` : ""}
               <span class="up-row__badge up-row__badge--${item.status}">${pipelineStatusLabel(item.status)}</span>
             </div>
             <h3 class="up-row__title">${item.title}</h3>
             <p class="up-row__meta">${metaParts([topic, format, voice])}</p>
-            ${isQueued ? '<p class="up-row__hint">In pipeline — needs a publish date</p>' : ""}
+            ${isQueued ? '<p class="up-row__hint">Ready to schedule</p>' : ""}
           </div>
         </div>
         <div class="row-menu">
@@ -426,6 +434,20 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   upcomingEl.addEventListener("click", (e) => {
     e.stopPropagation();
+
+    const queuedRow = (e.target as HTMLElement).closest(".up-row--queued") as HTMLElement | null;
+    if (queuedRow && !(e.target as HTMLElement).closest(".row-menu")) {
+      const pipelineId = queuedRow.dataset.pipelineId;
+      const draftId = queuedRow.dataset.draftId;
+      if (pipelineId && draftId) {
+        closeRowMenu();
+        schedulePanel.hidden = false;
+        scheduleToggle.setAttribute("aria-expanded", "true");
+        openScheduleForm(loadWorkspace(), draftId, pipelineId);
+        return;
+      }
+    }
+
     const trigger = (e.target as HTMLElement).closest("[data-menu-trigger]") as HTMLElement | null;
     if (trigger) {
       e.stopPropagation();
@@ -916,7 +938,8 @@ import AppLayout from "../../layouts/AppLayout.astro";
     padding-bottom: 0.72rem;
   }
 
-  .upcoming-list :global(.up-row--scheduled:hover) {
+  .upcoming-list :global(.up-row--scheduled:hover),
+  .upcoming-list :global(.up-row--queued:hover) {
     background: rgba(10, 22, 40, 0.02);
   }
 
@@ -931,18 +954,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   .upcoming-list :global(.up-row--queued) {
-    border-left-color: rgba(201, 133, 46, 0.45);
-    background: var(--warm-soft);
-    border-radius: 0 8px 8px 0;
-  }
-
-  .upcoming-list :global(.up-row--queued:hover) {
-    background: rgba(201, 133, 46, 0.18);
-  }
-
-  .upcoming-list :global(.up-row--next.up-row--queued) {
-    border-left-color: var(--accent);
-    background: linear-gradient(90deg, rgba(12, 143, 124, 0.07) 0%, var(--warm-soft) 100%);
+    cursor: pointer;
   }
 
   .upcoming-list :global(.up-row__body) {
@@ -972,6 +984,12 @@ import AppLayout from "../../layouts/AppLayout.astro";
   .upcoming-list :global(.up-row__mark--offline) {
     opacity: 0.62;
     filter: grayscale(0.25);
+  }
+
+  .upcoming-list :global(.up-row__mark--unassigned) {
+    background: transparent;
+    border: 1px dashed var(--line);
+    box-shadow: none;
   }
 
   .upcoming-list :global(.up-row__main) {
@@ -1004,12 +1022,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
     color: var(--ink);
   }
 
-  .upcoming-list :global(.up-row--queued .up-row__date) {
-    font-weight: 650;
-    font-style: italic;
-    color: var(--ink-muted);
-  }
-
   .upcoming-list :global(.up-row__badge) {
     padding: 0.1rem 0.42rem;
     border-radius: 999px;
@@ -1027,15 +1039,15 @@ import AppLayout from "../../layouts/AppLayout.astro";
   }
 
   .upcoming-list :global(.up-row__badge--queued) {
-    background: rgba(201, 133, 46, 0.18);
-    color: #8a5a1e;
+    background: rgba(10, 22, 40, 0.06);
+    color: var(--ink-muted);
   }
 
   .upcoming-list :global(.up-row__hint) {
     margin: 0.28rem 0 0;
     font-size: 0.72rem;
     font-weight: 600;
-    color: #9a6a28;
+    color: var(--ink-muted);
     line-height: 1.35;
   }
 

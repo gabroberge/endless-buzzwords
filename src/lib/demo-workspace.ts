@@ -54,7 +54,6 @@ function seedPipeline(): PipelineItem[] {
       id: "p4",
       draftId: "seed4",
       title: "60-second script · caching",
-      channelId: "youtube",
       when: "",
       status: "queued",
     },

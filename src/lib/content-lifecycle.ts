@@ -4,25 +4,12 @@ import type { Channel, ChannelId, PipelineItem, Workspace } from "./storage";
 
 export type ContentLifecycle = "draft" | "queued" | "published";
 
-export function channelForDraft(draft: Draft): ChannelId {
-  if (draft.channelHint === "x") return "x";
-  if (draft.channelHint === "youtube") return "youtube";
-  if (draft.channelHint === "newsletter") return "linkedin";
-  return "linkedin";
-}
-
 export function getConnectedChannels(ws: Workspace): Channel[] {
   return ws.channels.filter((c) => c.connected);
 }
 
 export function isChannelConnected(ws: Workspace, channelId: ChannelId): boolean {
   return ws.channels.some((c) => c.id === channelId && c.connected);
-}
-
-export function defaultChannelForDraft(ws: Workspace, draft: Draft): ChannelId | null {
-  const preferred = channelForDraft(draft);
-  if (isChannelConnected(ws, preferred)) return preferred;
-  return getConnectedChannels(ws)[0]?.id ?? null;
 }
 
 export function channelLabelForItem(ws: Workspace, channelId: ChannelId): string {
@@ -95,7 +82,7 @@ export function synthesizeContentFromPipeline(item: PipelineItem): Draft {
     ...base,
     id: item.draftId,
     title: item.title,
-    channelHint: channelHintByChannel[item.channelId] ?? "linkedin",
+    channelHint: item.channelId ? (channelHintByChannel[item.channelId] ?? base.channelHint) : base.channelHint,
     createdAt: item.when,
   };
 }
@@ -117,7 +104,9 @@ export function normalizeWorkspace(ws: Workspace): Workspace {
     }
   }
 
-  const pipeline = dedupeActivePipeline(ws.pipeline);
+  const pipeline = dedupeActivePipeline(ws.pipeline).map((item) =>
+    item.status === "queued" ? { ...item, channelId: undefined, when: "" } : item,
+  );
   const withContent = ensurePipelineContent(mergedDrafts, pipeline);
   const drafts = withContent.map((draft) => ({
     ...draft,
@@ -189,22 +178,33 @@ export function queueContent(
   options: { channelId?: ChannelId; when?: string | null; status?: PipelineItem["status"] } = {},
 ): Workspace {
   if (hasActiveQueueEntry(ws, draft.id)) return ws;
-  if (getConnectedChannels(ws).length === 0) return ws;
-
-  let channelId: ChannelId | undefined = options.channelId;
-  if (channelId && !isChannelConnected(ws, channelId)) return ws;
-  if (!channelId) {
-    const fallback = defaultChannelForDraft(ws, draft);
-    if (!fallback) return ws;
-    channelId = fallback;
-  }
 
   const when = options.when ?? "";
   const hasDate = Boolean(when);
   const status = options.status ?? (hasDate ? "scheduled" : "queued");
-  if (status === "scheduled" && !hasDate) return ws;
 
   const queued = { ...draft, lifecycle: "queued" as const };
+
+  if (status === "scheduled") {
+    const channelId = options.channelId;
+    if (!channelId || !hasDate || !isChannelConnected(ws, channelId)) return ws;
+
+    return {
+      ...ws,
+      drafts: upsertContent(ws.drafts, queued),
+      pipeline: dedupeActivePipeline([
+        {
+          id: `p_${Date.now()}`,
+          draftId: draft.id,
+          title: draft.title,
+          channelId,
+          when,
+          status: "scheduled",
+        },
+        ...ws.pipeline,
+      ]),
+    };
+  }
 
   return {
     ...ws,
@@ -214,9 +214,8 @@ export function queueContent(
         id: `p_${Date.now()}`,
         draftId: draft.id,
         title: draft.title,
-        channelId,
-        when: hasDate ? when : "",
-        status,
+        when: "",
+        status: "queued",
       },
       ...ws.pipeline,
     ]),

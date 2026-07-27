@@ -15,7 +15,8 @@ export type PipelineItem = {
   id: string;
   draftId: string;
   title: string;
-  channelId: ChannelId;
+  /** Set only when status is scheduled or published. */
+  channelId?: ChannelId;
   when: string;
   status: "queued" | "scheduled" | "published";
 };

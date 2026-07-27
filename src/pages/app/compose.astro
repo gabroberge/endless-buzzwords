@@ -144,7 +144,7 @@ import AppLayout from "../../layouts/AppLayout.astro";
   } from "../../lib/content-engine";
   import { topics } from "../../lib/data/topics";
   import { voiceProfiles } from "../../lib/data/voice";
-  import { getConnectedChannels, queueContent, saveToLibrary } from "../../lib/content-lifecycle";
+  import { queueContent, saveToLibrary } from "../../lib/content-lifecycle";
   import { loadWorkspace, updateWorkspace } from "../../lib/storage";
   import { showToast } from "../../lib/ui";
 
@@ -366,11 +366,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
 
   function queueDraft() {
     if (!current) return;
-    const ws = loadWorkspace();
-    if (getConnectedChannels(ws).length === 0) {
-      showToast("Connect a channel first");
-      return;
-    }
     updateWorkspace((s) => queueContent(s, current!, { status: "queued", when: null }));
     showToast("Queued to pipeline");
     window.dispatchEvent(new Event("eb:workspace"));

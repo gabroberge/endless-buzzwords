@@ -51,7 +51,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
   import { voiceProfiles } from "../../lib/data/voice";
   import {
     findContent,
-    getConnectedChannels,
     getLibraryItems,
     hasActiveQueueEntry,
     libraryCounts,
@@ -93,10 +92,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
       return `<div class="lib-row__action"><span class="lib-row__status">Queued</span></div>`;
     }
 
-    if (getConnectedChannels(ws).length === 0) {
-      return `<div class="lib-row__action"><span class="lib-row__status lib-row__status--muted">No channels</span></div>`;
-    }
-
     const published = libraryStatusOf(ws, draft) === "published";
     const label = published ? "Re-queue" : "Queue";
     return `<div class="lib-row__action">
@@ -129,10 +124,6 @@ import AppLayout from "../../layouts/AppLayout.astro";
   function queueItem(draft: Draft) {
     const ws = loadWorkspace();
     if (hasActiveQueueEntry(ws, draft.id)) return;
-    if (getConnectedChannels(ws).length === 0) {
-      showToast("Connect a channel first");
-      return;
-    }
     updateWorkspace((s) => queueContent(s, draft, { status: "queued", when: null }));
     showToast("Queued");
     window.dispatchEvent(new Event("eb:workspace"));
