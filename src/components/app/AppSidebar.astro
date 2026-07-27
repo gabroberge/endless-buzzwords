@@ -1,16 +1,15 @@
 ---
+import { appNavItems } from "../../lib/app-nav";
 import { stripBase, withBase } from "../../lib/paths";
 
 const pathname = stripBase(Astro.url.pathname);
 
-const links = [
-  { href: withBase("/app"), label: "Pipeline", match: /^\/app\/?$/ },
-  { href: withBase("/app/compose"), label: "Compose", match: /^\/app\/compose/ },
-  { href: withBase("/app/library"), label: "Library", match: /^\/app\/library/ },
-  { href: withBase("/app/coverage"), label: "Coverage", match: /^\/app\/coverage/ },
-  { href: withBase("/app/channels"), label: "Channels", match: /^\/app\/channels/ },
-  { href: withBase("/app/brand"), label: "Brand", match: /^\/app\/brand/ },
-];
+const links = appNavItems.map((item) => ({
+  href: withBase(item.path),
+  label: item.label,
+  match: item.match,
+  active: item.match.test(pathname),
+}));
 ---
 
 <aside class="sidebar" aria-label="Workspace">
@@ -25,7 +24,7 @@ const links = [
   <nav class="sidebar__nav">
     {
       links.map((l) => (
-        <a href={l.href} class:list={[{ active: l.match.test(pathname) }]} aria-current={l.match.test(pathname) ? "page" : undefined}>
+        <a href={l.href} class:list={[{ active: l.active }]} aria-current={l.active ? "page" : undefined}>
           {l.label}
         </a>
       ))
@@ -39,11 +38,13 @@ const links = [
 </aside>
 
 <nav class="mobile-tabbar" aria-label="Workspace mobile">
-  <a href={withBase("/app")} class:list={[{ active: /^\/app\/?$/.test(pathname) }]}>Pipe</a>
-  <a href={withBase("/app/compose")} class:list={[{ active: pathname.includes("/compose") }]}>Compose</a>
-  <a href={withBase("/app/coverage")} class:list={[{ active: pathname.includes("/coverage") }]}>Cover</a>
-  <a href={withBase("/app/channels")} class:list={[{ active: pathname.includes("/channels") }]}>Send</a>
-  <a href={withBase("/app/brand")} class:list={[{ active: pathname.includes("/brand") }]}>Brand</a>
+  {
+    links.map((l) => (
+      <a href={l.href} class:list={[{ active: l.active }]} aria-current={l.active ? "page" : undefined}>
+        {l.label}
+      </a>
+    ))
+  }
 </nav>
 
 <script>
@@ -144,21 +145,28 @@ const links = [
     inset: auto 0 0 0;
     z-index: 40;
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: 0.15rem;
-    padding: 0.55rem 0.4rem calc(0.55rem + env(safe-area-inset-bottom));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(2, auto);
+    gap: 0.2rem 0.12rem;
+    padding: 0.45rem 0.35rem calc(0.45rem + env(safe-area-inset-bottom, 0px));
     background: rgba(255, 255, 255, 0.94);
     border-top: 1px solid var(--line);
     backdrop-filter: blur(12px);
   }
 
   .mobile-tabbar a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 2.35rem;
     text-align: center;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
+    line-height: 1.15;
     font-weight: 700;
     color: var(--ink-muted);
-    padding: 0.45rem 0.2rem;
+    padding: 0.35rem 0.15rem;
     border-radius: 10px;
+    min-width: 0;
   }
 
   .mobile-tabbar a.active {

@@ -9,11 +9,14 @@ import { withBase } from "../../lib/paths";
 
     <section class="panel card">
       <header class="panel__head">
-        <h2>Upcoming</h2>
+        <h2 class="panel__title" id="panel-upcoming-title">
+          Upcoming <span class="panel__count" id="upcoming-count" hidden></span>
+        </h2>
         <div class="panel__actions">
           <div class="schedule-anchor">
             <button class="btn btn-soft btn-sm" type="button" id="schedule-toggle" aria-expanded="false" aria-controls="schedule-panel">
-              + Schedule content
+              <span class="schedule-toggle__label schedule-toggle__label--desktop">+ Schedule content</span>
+              <span class="schedule-toggle__label schedule-toggle__label--mobile">Schedule</span>
             </button>
             <div class="schedule-panel" id="schedule-panel" hidden>
               <div id="schedule-no-channels" class="schedule-panel__notice" hidden>
@@ -160,7 +163,7 @@ import { withBase } from "../../lib/paths";
 
     ops.innerHTML = `
       <div class="pipe-ops__real">
-        ${opsItem("Upcoming", String(upcomingCount))}
+        ${opsItem("Upcoming", String(upcomingCount), "pipe-ops__item--upcoming")}
         ${opsItem("Runway", runwayValue(m), `pipe-ops__item--runway ${runwayClass}`)}
         ${opsItem(
           "Published this week",
@@ -175,6 +178,18 @@ import { withBase } from "../../lib/paths";
         ${opsItem("Original thoughts", String(m.originalThoughts), "pipe-ops__item--satire")}
         ${opsItem("Buzzwords deployed", String(m.buzzwordsDeployed), "pipe-ops__item--satire")}
       </div>`;
+  }
+
+  function renderUpcomingHeading(count: number) {
+    const countEl = document.getElementById("upcoming-count");
+    if (!countEl) return;
+    if (count > 0) {
+      countEl.textContent = String(count);
+      countEl.hidden = false;
+    } else {
+      countEl.textContent = "";
+      countEl.hidden = true;
+    }
   }
 
   function closeSchedulePanel() {
@@ -290,7 +305,7 @@ import { withBase } from "../../lib/paths";
             <div class="up-row__head">
               ${isNext ? '<span class="up-row__next">Next</span>' : ""}
               ${!isQueued ? `<span class="up-row__date">${formatDay(item.when)}</span>` : ""}
-              <span class="up-row__badge up-row__badge--${item.status}">${pipelineStatusLabel(item.status)}</span>
+              ${isQueued ? `<span class="up-row__badge up-row__badge--queued">${pipelineStatusLabel(item.status)}</span>` : `<span class="up-row__badge up-row__badge--scheduled">${pipelineStatusLabel(item.status)}</span>`}
             </div>
             <h3 class="up-row__title">${item.title}</h3>
             <p class="up-row__meta">${metaParts([topic, format, voice])}</p>
@@ -392,6 +407,7 @@ import { withBase } from "../../lib/paths";
     const nextScheduledId = upcoming.find((item) => item.status === "scheduled")?.id;
 
     renderOpsSummary(m, upcoming.length);
+    renderUpcomingHeading(upcoming.length);
     renderSchedulePanel(ws);
 
     if (upcoming.length) {
@@ -679,11 +695,28 @@ import { withBase } from "../../lib/paths";
     margin-bottom: 0.85rem;
   }
 
-  .panel__head h2 {
+  .panel__head h2,
+  .panel__title {
     font-family: var(--font-body);
     font-size: 1rem;
     font-weight: 750;
     margin: 0;
+  }
+
+  .panel__count {
+    display: none;
+    margin-left: 0.35rem;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--ink-muted);
+  }
+
+  .panel__count[hidden] {
+    display: none !important;
+  }
+
+  .schedule-toggle__label--mobile {
+    display: none;
   }
 
   .panel__actions {
@@ -1159,5 +1192,138 @@ import { withBase } from "../../lib/paths";
     margin: 0;
     font-size: 0.84rem;
     line-height: 1.5;
+  }
+
+  @media (max-width: 900px) {
+    .pipe-ops :global(.pipe-ops__item--upcoming),
+    .pipe-ops :global(.pipe-ops__satire) {
+      display: none !important;
+    }
+
+    .pipe-ops :global(.pipe-ops__real) {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      width: 100%;
+      gap: 0.55rem;
+    }
+
+    .pipe-ops :global(.pipe-ops__real .pipe-ops__item) {
+      flex: none;
+      border-right: none;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.8rem 0.85rem;
+      background: #fff;
+    }
+
+    .pipe-ops :global(.pipe-ops__real .pipe-ops__item:first-child),
+    .pipe-ops :global(.pipe-ops__real .pipe-ops__item:last-child) {
+      padding: 0.8rem 0.85rem;
+    }
+
+    .pipe-ops :global(.pipe-ops__real .pipe-ops__item .pipe-ops__label) {
+      font-size: 0.68rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .pipe-ops :global(.pipe-ops__real .pipe-ops__item .pipe-ops__value) {
+      font-size: 1.35rem;
+    }
+
+    .panel__count:not([hidden]) {
+      display: inline;
+    }
+
+    .panel__head {
+      align-items: flex-start;
+      margin-bottom: 1rem;
+    }
+
+    .schedule-toggle__label--desktop {
+      display: none;
+    }
+
+    .schedule-toggle__label--mobile {
+      display: inline;
+    }
+
+    .upcoming-list :global(.up-row) {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+      grid-template-rows: auto auto auto;
+      align-items: start;
+      gap: 0.45rem 0.7rem;
+      margin: 0;
+      padding: 1.05rem 0.7rem;
+      padding-right: 0.55rem;
+    }
+
+    .upcoming-list :global(.up-row:last-child) {
+      padding-bottom: 1.05rem;
+    }
+
+    .upcoming-list :global(.up-row__body) {
+      display: contents;
+    }
+
+    .upcoming-list :global(.up-row__mark) {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+      width: 1.75rem;
+      height: 1.75rem;
+      margin-top: 0.1rem;
+    }
+
+    .upcoming-list :global(.up-row__main) {
+      display: contents;
+    }
+
+    .upcoming-list :global(.up-row__head) {
+      grid-column: 2;
+      grid-row: 1;
+      margin-bottom: 0;
+      gap: 0.35rem 0.5rem;
+    }
+
+    .upcoming-list :global(.up-row__title) {
+      grid-column: 2 / 4;
+      grid-row: 2;
+      font-size: 1rem;
+      line-height: 1.35;
+      margin: 0.1rem 0 0;
+    }
+
+    .upcoming-list :global(.up-row__meta) {
+      grid-column: 2 / 4;
+      grid-row: 3;
+      font-size: 0.8rem;
+      margin-top: 0.2rem;
+    }
+
+    .upcoming-list :global(.up-row__hint) {
+      grid-column: 2 / 4;
+      grid-row: 4;
+      margin-top: 0.15rem;
+    }
+
+    .upcoming-list :global(.up-row--scheduled .up-row__badge--scheduled) {
+      display: none;
+    }
+
+    .upcoming-list :global(.up-row__date) {
+      font-size: 0.82rem;
+    }
+
+    .upcoming-list :global(.row-menu) {
+      grid-column: 3;
+      grid-row: 1;
+      align-self: start;
+    }
+
+    .upcoming-list :global(.row-menu__trigger) {
+      width: 2rem;
+      height: 2rem;
+    }
   }
 </style>
