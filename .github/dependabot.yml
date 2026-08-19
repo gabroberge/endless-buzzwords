@@ -6,6 +6,8 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "deps(actions)"
+    assignees:
+      - gabroberge
 
   - package-ecosystem: "bun"
     directory: "/"
@@ -13,3 +15,5 @@ updates:
       interval: "weekly"
     commit-message:
       prefix: "deps(bun)"
+    assignees:
+      - gabroberge
